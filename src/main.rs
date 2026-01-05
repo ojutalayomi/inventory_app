@@ -14,6 +14,7 @@ mod messages;
 mod note;
 mod persistence;
 mod search;
+mod update_checker;
 mod user;
 mod views;
 
@@ -108,6 +109,12 @@ struct InventoryApp {
     settings_interval_input: String,
     settings_category_input: String,
 
+    // Update state
+    update_checker: update_checker::UpdateChecker,
+    latest_version: Option<messages::UpdateInfo>,
+    show_update_notification: bool,
+    update_download_progress: Option<f32>,
+
     // View state
     current_view: View,
 }
@@ -161,6 +168,13 @@ impl InventoryApp {
                 settings: AppSettings::default(),
                 settings_interval_input: String::from("5"),
                 settings_category_input: String::from("General"),
+                update_checker: update_checker::UpdateChecker::new(
+                    "ojutalayomi".to_string(),
+                    "inventory_app".to_string(),
+                ),
+                latest_version: None,
+                show_update_notification: false,
+                update_download_progress: None,
                 current_view: View::Inventory,
             },
             Task::perform(persistence::load_state(), Message::Loaded),
@@ -239,7 +253,16 @@ impl InventoryApp {
                     self.password_input.clear();
                     self.login_error = None;
                     self.state = AppState::Loaded;
-                    return self.auto_save();
+                    
+                    // Check for updates on login and auto-save
+                    let update_checker = self.update_checker.clone();
+                    let check_update_task = Task::perform(
+                        async move {
+                            update_checker.check_for_updates()
+                        },
+                        Message::UpdateCheckComplete,
+                    );
+                    return Task::batch(vec![self.auto_save(), check_update_task]);
                 } else {
                     self.login_error = Some("Invalid username or password".to_string());
                 }
@@ -991,6 +1014,57 @@ impl InventoryApp {
             Message::ClearAllData => {
                 self.show_clear_confirm = true;
             }
+
+            // Update messages
+            Message::CheckForUpdates => {
+                let update_checker = self.update_checker.clone();
+                return Task::perform(
+                    async move {
+                        update_checker.check_for_updates()
+                    },
+                    Message::UpdateCheckComplete,
+                );
+            }
+            Message::UpdateCheckComplete(result) => {
+                match result {
+                    Ok(Some(update_info)) => {
+                        self.latest_version = Some(update_info);
+                        self.show_update_notification = true;
+                    }
+                    Ok(None) => {
+                        // No update available
+                        self.latest_version = None;
+                    }
+                    Err(e) => {
+                        eprintln!("Update check failed: {}", e);
+                        self.latest_version = None;
+                    }
+                }
+            }
+            Message::DownloadUpdate(download_url) => {
+                let update_checker = self.update_checker.clone();
+                return Task::perform(
+                    async move {
+                        update_checker.download_installer(&download_url)
+                    },
+                    |result| match result {
+                        Ok(path) => Message::InstallUpdate(path),
+                        Err(e) => {
+                            eprintln!("Download failed: {}", e);
+                            Message::CloseUpdateNotification
+                        }
+                    },
+                );
+            }
+            Message::InstallUpdate(path) => {
+                if let Err(e) = update_checker::UpdateChecker::open_installer(&path) {
+                    eprintln!("Failed to open installer: {}", e);
+                }
+                self.show_update_notification = false;
+            }
+            Message::CloseUpdateNotification => {
+                self.show_update_notification = false;
+            }
         }
         Task::none()
     }
@@ -1116,6 +1190,10 @@ impl InventoryApp {
                     stack.push(self.view_clear_confirm());
                 }
 
+                if self.show_update_notification && self.latest_version.is_some() {
+                    stack.push(self.view_update_notification());
+                }
+
                 if stack.len() == 1 {
                     stack.into_iter().next().unwrap()
                 } else {
@@ -1233,6 +1311,7 @@ impl InventoryApp {
                 &self.settings,
                 &self.settings_interval_input,
                 &self.settings_category_input,
+                self.latest_version.as_ref(),
             ),
             View::UserManagement => {
                 let users: Vec<_> = self.auth_store.get_all_users();
@@ -1365,6 +1444,110 @@ impl InventoryApp {
                 ))),
                 border: iced::Border {
                     color: iced::Color::from_rgb(0.5, 0.5, 0.5),
+                    width: 2.0,
+                    radius: 10.0.into(),
+                },
+                ..Default::default()
+            }),
+        )
+        .width(iced::Length::Fill)
+        .height(iced::Length::Fill)
+        .center_x(iced::Length::Fill)
+        .center_y(iced::Length::Fill)
+        .style(|_theme: &iced::Theme| container::Style {
+            background: Some(iced::Background::Color(iced::Color::from_rgba(
+                0.0, 0.0, 0.0, 0.7,
+            ))),
+            ..Default::default()
+        })
+        .into()
+    }
+
+    fn view_update_notification(&self) -> Element<Message> {
+        use iced::widget::{button, column, container, row, scrollable, text};
+        
+        let update_info = self.latest_version.as_ref().unwrap();
+        
+        let release_notes = if update_info.release_notes.len() > 300 {
+            format!("{}...", &update_info.release_notes[..300])
+        } else {
+            update_info.release_notes.clone()
+        };
+        
+        container(
+            container(
+                column![
+                    text("Update Available").size(28).style(|_theme: &iced::Theme| {
+                        text::Style {
+                            color: Some(iced::Color::from_rgb(0.3, 0.8, 0.4)),
+                        }
+                    }),
+                    text("").size(10),
+                    text(format!("New Version: {}", update_info.version)).size(20),
+                    text(format!("Current Version: v{}", env!("CARGO_PKG_VERSION"))).size(14)
+                        .style(|_theme: &iced::Theme| {
+                            text::Style {
+                                color: Some(iced::Color::from_rgb(0.7, 0.7, 0.7)),
+                            }
+                        }),
+                    text("").size(10),
+                    text("What's New:").size(16),
+                    scrollable(
+                        text(release_notes)
+                            .size(13)
+                            .style(|_theme: &iced::Theme| {
+                                text::Style {
+                                    color: Some(iced::Color::from_rgb(0.8, 0.8, 0.8)),
+                                }
+                            })
+                    ).height(150),
+                    text("").size(15),
+                    row![
+                        button("Update Now")
+                            .on_press(Message::DownloadUpdate(update_info.download_url.clone()))
+                            .padding(12)
+                            .style(|_theme: &iced::Theme, _status: button::Status| {
+                                button::Style {
+                                    background: Some(iced::Background::Color(
+                                        iced::Color::from_rgb(0.2, 0.6, 0.3),
+                                    )),
+                                    text_color: iced::Color::WHITE,
+                                    border: iced::Border {
+                                        radius: 5.0.into(),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                }
+                            }),
+                        button("Later")
+                            .on_press(Message::CloseUpdateNotification)
+                            .padding(12)
+                            .style(|_theme: &iced::Theme, _status: button::Status| {
+                                button::Style {
+                                    background: Some(iced::Background::Color(
+                                        iced::Color::from_rgb(0.3, 0.3, 0.3),
+                                    )),
+                                    text_color: iced::Color::WHITE,
+                                    border: iced::Border {
+                                        radius: 5.0.into(),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                }
+                            }),
+                    ]
+                    .spacing(15),
+                ]
+                .spacing(5)
+                .padding(30),
+            )
+            .width(500)
+            .style(|_theme: &iced::Theme| container::Style {
+                background: Some(iced::Background::Color(iced::Color::from_rgb(
+                    0.15, 0.15, 0.15,
+                ))),
+                border: iced::Border {
+                    color: iced::Color::from_rgb(0.3, 0.7, 0.4),
                     width: 2.0,
                     radius: 10.0.into(),
                 },

@@ -97,6 +97,13 @@ pub enum Message {
     ConfirmClearAllData,
     CancelClearAllData,
 
+    // Update messages
+    CheckForUpdates,
+    UpdateCheckComplete(Result<Option<UpdateInfo>, String>),
+    DownloadUpdate(String), // download_url
+    InstallUpdate(std::path::PathBuf),
+    CloseUpdateNotification,
+
     // App actions
     Save,
     ShowAbout,
@@ -197,4 +204,12 @@ pub enum View {
     UserManagement,
     AuditLog,
     Alerts,
+}
+
+#[derive(Debug, Clone)]
+pub struct UpdateInfo {
+    pub version: String,
+    pub download_url: String,
+    pub release_notes: String,
+    pub published_at: String,
 }

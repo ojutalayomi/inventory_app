@@ -7,6 +7,7 @@ pub fn view<'a>(
     settings: &'a AppSettings,
     interval_input: &'a str,
     category_input: &'a str,
+    latest_version: Option<&'a crate::messages::UpdateInfo>,
 ) -> Element<'a, Message> {
     let title = text("Settings").size(32);
 
@@ -238,13 +239,61 @@ pub fn view<'a>(
     .spacing(10)
     .padding(20);
 
+    let current_version = env!("CARGO_PKG_VERSION");
+    
+    let update_section = column![
+        text("Updates").size(20).style(|_theme: &iced::Theme| {
+            iced::widget::text::Style {
+                color: Some(iced::Color::from_rgb(0.7, 0.8, 0.9)),
+            }
+        }),
+        row![
+            text(format!("Current Version: v{}", current_version)).size(14),
+            if let Some(update) = latest_version {
+                button(format!("🔔 Update Available: {}", update.version))
+                    .on_press(Message::DownloadUpdate(update.download_url.clone()))
+                    .padding(8)
+                    .style(
+                        |_theme: &iced::Theme, _status: iced::widget::button::Status| {
+                            iced::widget::button::Style {
+                                background: Some(iced::Background::Color(iced::Color::from_rgb(
+                                    0.2, 0.6, 0.3,
+                                ))),
+                                text_color: iced::Color::WHITE,
+                                border: iced::Border {
+                                    radius: 5.0.into(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        }
+                    )
+            } else {
+                button("Check for Updates")
+                    .on_press(Message::CheckForUpdates)
+                    .padding(8)
+            },
+        ]
+        .spacing(10)
+        .align_y(iced::Alignment::Center),
+        text("Checks GitHub for new releases")
+            .size(12)
+            .style(|_theme: &iced::Theme| {
+                iced::widget::text::Style {
+                    color: Some(iced::Color::from_rgb(0.5, 0.5, 0.5)),
+                }
+            }),
+    ]
+    .spacing(10)
+    .padding(20);
+
     let info_section = column![
         text("About").size(20).style(|_theme: &iced::Theme| {
             iced::widget::text::Style {
                 color: Some(iced::Color::from_rgb(0.7, 0.8, 0.9)),
             }
         }),
-        text("Inventory Manager v0.2.0").size(14),
+        text(format!("Inventory Manager v{}", current_version)).size(14),
         text("Built with Rust & Iced").size(12),
         text("").size(8),
         text("Data Location:")
@@ -311,6 +360,19 @@ pub fn view<'a>(
                 }
             }),
             container(data_section).style(|_theme: &iced::Theme| {
+                container::Style {
+                    background: Some(iced::Background::Color(iced::Color::from_rgb(
+                        0.12, 0.12, 0.12,
+                    ))),
+                    border: iced::Border {
+                        color: iced::Color::from_rgb(0.2, 0.2, 0.2),
+                        width: 1.0,
+                        radius: 5.0.into(),
+                    },
+                    ..Default::default()
+                }
+            }),
+            container(update_section).style(|_theme: &iced::Theme| {
                 container::Style {
                     background: Some(iced::Background::Color(iced::Color::from_rgb(
                         0.12, 0.12, 0.12,
