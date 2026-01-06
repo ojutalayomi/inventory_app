@@ -16,7 +16,7 @@ jobs:
       matrix:
         include:
           - platform: macos-intel
-            os: macos-13
+            os: macos-15-intel
             arch: x86_64
           - platform: macos-silicon
             os: macos-latest
