@@ -43,7 +43,7 @@ fn main() -> iced::Result {
         icon: icon::load_icon(),
         ..Default::default()
     })
-    .run_with(InventoryApp::new)
+        .run_with(InventoryApp::new)
 }
 
 enum AppState {
@@ -64,7 +64,7 @@ struct InventoryApp {
     username_input: String,
     password_input: String,
     login_error: Option<String>,
-
+    
     // User management state
     new_username_input: String,
     new_password_input: String,
@@ -116,7 +116,7 @@ struct InventoryApp {
     latest_version: Option<update_checker::UpdateInfo>,
     show_update_notification: bool,
     update_download_progress: Option<f32>,
-
+    
     // View state
     current_view: View,
 }
@@ -249,7 +249,7 @@ impl InventoryApp {
                         "User logged in successfully".to_string(),
                     );
                     self.audit_log.add_entry(audit_entry);
-
+                    
                     self.session = Some(session);
                     self.username_input.clear();
                     self.password_input.clear();
@@ -331,7 +331,7 @@ impl InventoryApp {
                                     );
                                     self.audit_log.add_entry(audit_entry);
                                 }
-
+                                
                                 self.new_username_input.clear();
                                 self.new_password_input.clear();
                                 self.new_role_input = None;
@@ -359,7 +359,7 @@ impl InventoryApp {
                     .auth_store
                     .get_user(&user_id)
                     .map(|u| u.username.clone());
-
+                    
                 match self.auth_store.delete_user(&user_id) {
                     Ok(_) => {
                         // Log user deletion
@@ -376,7 +376,7 @@ impl InventoryApp {
                                 self.audit_log.add_entry(audit_entry);
                             }
                         }
-
+                        
                         self.user_operation_error = None;
                         return self.auto_save();
                     }
@@ -498,7 +498,7 @@ impl InventoryApp {
                 let csv_content = self.audit_log.export_to_csv();
                 let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
                 let filename = format!("audit_log_{}.csv", timestamp);
-
+                
                 return Task::perform(
                     async move {
                         let export_path = directories::UserDirs::new()
@@ -508,7 +508,7 @@ impl InventoryApp {
                                     .map(|dirs| dirs.home_dir().to_path_buf())
                             })
                             .unwrap_or_else(|| std::path::PathBuf::from("."));
-
+                        
                         let file_path = export_path.join(filename);
                         std::fs::write(file_path, csv_content).ok();
                     },
@@ -552,7 +552,7 @@ impl InventoryApp {
             Message::NameChanged(value) => {
                 self.name_input = value.clone();
                 self.item_validation_error = None;
-
+                
                 // Check for similar items as the user types
                 if value.len() > 3 {
                     self.similar_items_warning = errors::find_similar_items(&value, &self.items);
@@ -587,7 +587,7 @@ impl InventoryApp {
             Message::SubmitItem => {
                 // Validate all fields
                 use errors::*;
-
+                
                 // Validate name
                 if let Err(e) = validate_required("Name", &self.name_input) {
                     self.item_validation_error = Some(e.to_string());
@@ -597,25 +597,25 @@ impl InventoryApp {
                     self.item_validation_error = Some(e.to_string());
                     return Task::none();
                 }
-
+                
                 // Validate SKU
                 if let Err(e) = validate_sku_format(&self.sku_input) {
                     self.item_validation_error = Some(e.to_string());
                     return Task::none();
                 }
-
+                
                 // Check for duplicate SKU
                 let exclude_id = if let Some(ItemDialogMode::Edit(id)) = &self.item_dialog_mode {
                     Some(id.as_str())
                 } else {
                     None
                 };
-
+                
                 if let Err(e) = check_duplicate_sku(&self.sku_input, &self.items, exclude_id) {
                     self.item_validation_error = Some(e.to_string());
                     return Task::none();
                 }
-
+                
                 // Validate quantity
                 let quantity = match validate_quantity(&self.quantity_input) {
                     Ok(q) => q,
@@ -624,7 +624,7 @@ impl InventoryApp {
                         return Task::none();
                     }
                 };
-
+                
                 // Validate price
                 let price = match validate_price(&self.price_input) {
                     Ok(p) => p,
@@ -633,81 +633,81 @@ impl InventoryApp {
                         return Task::none();
                     }
                 };
-
+                
                 // All validations passed
                 match &self.item_dialog_mode {
-                    Some(ItemDialogMode::Add) => {
-                        let new_item = InventoryItem::new(
-                            self.name_input.clone(),
-                            self.sku_input.clone(),
-                            self.category_input.clone(),
-                            self.supplier_input.clone(),
-                            self.description_input.clone(),
-                            quantity,
-                            price,
-                        );
-
-                        // Log item creation
-                        if let Some(session) = &self.session {
-                            let audit_entry = AuditEntry::new(
-                                session.user_id.clone(),
-                                session.username.clone(),
-                                AuditAction::ItemCreated,
-                                "item".to_string(),
-                                Some(new_item.id.clone()),
-                                format!("Created item: {} (SKU: {})", new_item.name, new_item.sku),
-                            );
-                            self.audit_log.add_entry(audit_entry);
-                        }
-
+                            Some(ItemDialogMode::Add) => {
+                                let new_item = InventoryItem::new(
+                                    self.name_input.clone(),
+                                    self.sku_input.clone(),
+                                    self.category_input.clone(),
+                                    self.supplier_input.clone(),
+                                    self.description_input.clone(),
+                                    quantity,
+                                    price,
+                                );
+                                
+                                // Log item creation
+                                if let Some(session) = &self.session {
+                                    let audit_entry = AuditEntry::new(
+                                        session.user_id.clone(),
+                                        session.username.clone(),
+                                        AuditAction::ItemCreated,
+                                        "item".to_string(),
+                                        Some(new_item.id.clone()),
+                                        format!("Created item: {} (SKU: {})", new_item.name, new_item.sku),
+                                    );
+                                    self.audit_log.add_entry(audit_entry);
+                                }
+                                
                                 self.items.push(new_item);
                                 self.filtered_items = self.search_filter.apply(&self.items);
                                 self.alert_manager.update_from_inventory(&self.items);
                             }
-                    Some(ItemDialogMode::Edit(item_id)) => {
+                            Some(ItemDialogMode::Edit(item_id)) => {
                         if let Some(item) = self.items.iter_mut().find(|i| i.id == *item_id) {
-                            let old_values = format!(
-                                "{} | {} | Qty: {} | ${:.2}",
-                                item.name, item.sku, item.quantity, item.price
-                            );
-
-                            item.name = self.name_input.clone();
-                            item.sku = self.sku_input.clone();
-                            item.category = self.category_input.clone();
-                            item.supplier = self.supplier_input.clone();
-                            item.description = self.description_input.clone();
-                            item.quantity = quantity;
-                            item.price = price;
-                            item.update_timestamp();
-
-                            let new_values = format!(
-                                "{} | {} | Qty: {} | ${:.2}",
-                                item.name, item.sku, item.quantity, item.price
-                            );
-
-                            // Log item update
-                            if let Some(session) = &self.session {
-                                let audit_entry = AuditEntry::new(
-                                    session.user_id.clone(),
-                                    session.username.clone(),
-                                    AuditAction::ItemUpdated,
-                                    "item".to_string(),
-                                    Some(item_id.clone()),
-                                    format!("Updated item: {}", item.name),
+                                    let old_values = format!(
+                                        "{} | {} | Qty: {} | ${:.2}",
+                                        item.name, item.sku, item.quantity, item.price
+                                    );
+                                    
+                                    item.name = self.name_input.clone();
+                                    item.sku = self.sku_input.clone();
+                                    item.category = self.category_input.clone();
+                                    item.supplier = self.supplier_input.clone();
+                                    item.description = self.description_input.clone();
+                                    item.quantity = quantity;
+                                    item.price = price;
+                                    item.update_timestamp();
+                                    
+                                    let new_values = format!(
+                                        "{} | {} | Qty: {} | ${:.2}",
+                                        item.name, item.sku, item.quantity, item.price
+                                    );
+                                    
+                                    // Log item update
+                                    if let Some(session) = &self.session {
+                                        let audit_entry = AuditEntry::new(
+                                            session.user_id.clone(),
+                                            session.username.clone(),
+                                            AuditAction::ItemUpdated,
+                                            "item".to_string(),
+                                            Some(item_id.clone()),
+                                            format!("Updated item: {}", item.name),
                                 )
                                 .with_values(Some(old_values), Some(new_values));
-                                self.audit_log.add_entry(audit_entry);
+                                        self.audit_log.add_entry(audit_entry);
+                                    }
+                                }
                             }
+                            None => {}
                         }
-                    }
-                    None => {}
-                }
-                self.item_dialog_mode = None;
-                self.clear_item_inputs();
-                self.item_validation_error = None;
+                        self.item_dialog_mode = None;
+                        self.clear_item_inputs();
+                        self.item_validation_error = None;
                 self.filtered_items = self.search_filter.apply(&self.items);
                 self.alert_manager.update_from_inventory(&self.items);
-                return self.auto_save();
+                        return self.auto_save();
             }
             Message::DeleteItem(item_id) => {
                 // Check permissions
@@ -718,11 +718,11 @@ impl InventoryApp {
                             .iter()
                             .find(|i| i.id == item_id)
                             .map(|i| format!("{} (SKU: {})", i.name, i.sku));
-
+                        
                         self.items.retain(|item| item.id != item_id);
                         self.filtered_items = self.search_filter.apply(&self.items);
                         self.alert_manager.update_from_inventory(&self.items);
-
+                        
                         // Log item deletion
                         if let Some(item_name) = deleted_item {
                             let audit_entry = AuditEntry::new(
@@ -735,7 +735,7 @@ impl InventoryApp {
                             );
                             self.audit_log.add_entry(audit_entry);
                         }
-
+                        
                         return self.auto_save();
                     }
                 }
@@ -747,7 +747,7 @@ impl InventoryApp {
                 self.selected_note_id = Some(new_note.id.clone());
                 self.note_title_input = new_note.title.clone();
                 self.editor_content = text_editor::Content::new();
-
+                
                 // Log note creation
                 if let Some(session) = &self.session {
                     let audit_entry = AuditEntry::new(
@@ -760,7 +760,7 @@ impl InventoryApp {
                     );
                     self.audit_log.add_entry(audit_entry);
                 }
-
+                
                 self.notes.push(new_note);
                 return self.auto_save();
             }
@@ -799,7 +799,7 @@ impl InventoryApp {
                         .iter()
                         .find(|n| n.id == *note_id)
                         .map(|n| n.title.clone());
-
+                    
                     self.notes.retain(|note| note.id != *note_id);
 
                     // Log note deletion
@@ -907,7 +907,7 @@ impl InventoryApp {
                     );
                     self.audit_log.add_entry(audit_entry);
                 }
-
+                
                 self.items.clear();
                 self.notes.clear();
                 self.selected_note_id = None;
@@ -960,7 +960,7 @@ impl InventoryApp {
                     );
                     self.audit_log.add_entry(audit_entry);
                 }
-
+                
                 let state = SavedState {
                     items: self.items.clone(),
                     notes: self.notes.clone(),
@@ -975,7 +975,7 @@ impl InventoryApp {
                         let json = serde_json::to_string_pretty(&state).unwrap_or_default();
                         let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
                         let filename = format!("inventory_export_{}.json", timestamp);
-
+                        
                         // Get desktop path or fallback to home
                         let export_path = directories::UserDirs::new()
                             .and_then(|dirs| dirs.desktop_dir().map(|p| p.to_path_buf()))
@@ -984,7 +984,7 @@ impl InventoryApp {
                                     .map(|dirs| dirs.home_dir().to_path_buf())
                             })
                             .unwrap_or_else(|| std::path::PathBuf::from("."));
-
+                        
                         let file_path = export_path.join(filename);
                         std::fs::write(file_path, json).ok();
                     },
@@ -1001,9 +1001,9 @@ impl InventoryApp {
                         let home = directories::UserDirs::new()
                             .map(|dirs| dirs.home_dir().to_path_buf())
                             .unwrap_or_else(|| std::path::PathBuf::from("."));
-
+                        
                         let import_path = home.join("Downloads").join("inventory_import.json");
-
+                        
                         if let Ok(contents) = std::fs::read_to_string(&import_path) {
                             if let Ok(state) = serde_json::from_str::<SavedState>(&contents) {
                                 persistence::save_state(&state).await.ok();
@@ -1087,7 +1087,7 @@ impl InventoryApp {
         if !self.settings.auto_save_enabled {
             return Task::none();
         }
-
+        
         let state = SavedState {
             items: self.items.clone(),
             notes: self.notes.clone(),
@@ -1217,37 +1217,37 @@ impl InventoryApp {
         } else {
             "🔔 Alerts".to_string()
         };
-
+        
         let mut header_buttons = vec![
             button("Inventory").on_press(Message::SwitchView(View::Inventory)),
             button("Notes").on_press(Message::SwitchView(View::Editor)),
             button(text(alert_text)).on_press(Message::SwitchView(View::Alerts)),
             button("Settings").on_press(Message::SwitchView(View::Settings)),
         ];
-
+        
         // Only admins can access user management
         if session.role.can_manage_users() {
             header_buttons
                 .push(button("Users").on_press(Message::SwitchView(View::UserManagement)));
         }
-
+        
         // Only managers and admins can access audit log
         if session.role.can_view_audit() {
             header_buttons.push(button("Audit Log").on_press(Message::SwitchView(View::AuditLog)));
         }
-
+        
         header_buttons.push(button("About").on_press(Message::ShowAbout));
-
+        
         let user_info = text(format!(
             "Logged in as: {} ({})",
             session.username,
             format!("{:?}", session.role)
         ))
-        .size(12)
+            .size(12)
         .style(|_theme: &iced::Theme| iced::widget::text::Style {
-            color: Some(iced::Color::from_rgb(0.7, 0.7, 0.7)),
-        });
-
+                    color: Some(iced::Color::from_rgb(0.7, 0.7, 0.7)),
+            });
+        
         let logout_button = button("Logout").on_press(Message::Logout).padding(5).style(
             |_theme: &iced::Theme, _status: iced::widget::button::Status| {
                 iced::widget::button::Style {
@@ -1263,10 +1263,10 @@ impl InventoryApp {
                 }
             },
         );
-
+        
         let header_row: Vec<Element<Message>> =
             header_buttons.into_iter().map(|b| b.into()).collect();
-
+        
         let header = column![
             row(header_row).spacing(10),
             row![user_info, logout_button,].spacing(10),
@@ -1284,7 +1284,7 @@ impl InventoryApp {
             ctrl_or_cmd
         );
         let shortcuts_hint =
-            row![
+                    row![
                 iced::widget::text(shortcuts_text)
                     .size(11)
                     .style(|_theme: &iced::Theme| {
@@ -1382,10 +1382,10 @@ impl InventoryApp {
 
     fn view_clear_confirm(&self) -> Element<Message> {
         use iced::widget::{button, column, container, row, text};
-
+        
         container(
             container(
-                column![
+            column![
                     text("Clear All Data?").size(24),
                     text("").size(10),
                     text("This will permanently delete:").size(14),
@@ -1419,21 +1419,21 @@ impl InventoryApp {
                             }),
                         button("Cancel")
                             .on_press(Message::CancelClearAllData)
-                            .padding(10)
+                    .padding(10)
                             .style(|_theme: &iced::Theme, _status: button::Status| {
                                 button::Style {
                                     background: Some(iced::Background::Color(
                                         iced::Color::from_rgb(0.3, 0.3, 0.3),
                                     )),
                                     text_color: iced::Color::WHITE,
-                                    border: iced::Border {
-                                        radius: 5.0.into(),
+                            border: iced::Border {
+                                radius: 5.0.into(),
                                         ..Default::default()
-                                    },
-                                    ..Default::default()
-                                }
-                            }),
-                    ]
+                            },
+                            ..Default::default()
+                        }
+                    }),
+            ]
                     .spacing(10),
                 ]
                 .spacing(5)
@@ -1460,8 +1460,8 @@ impl InventoryApp {
             background: Some(iced::Background::Color(iced::Color::from_rgba(
                 0.0, 0.0, 0.0, 0.7,
             ))),
-            ..Default::default()
-        })
+                ..Default::default()
+            })
         .into()
     }
 
@@ -1566,6 +1566,6 @@ impl InventoryApp {
             ))),
             ..Default::default()
         })
-        .into()
+            .into()
     }
 }
