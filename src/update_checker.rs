@@ -41,13 +41,13 @@ impl UpdateChecker {
         }
     }
 
-    pub fn check_for_updates(&self) -> Result<Option<UpdateInfo>, String> {
+    pub async fn check_for_updates(&self) -> Result<Option<UpdateInfo>, String> {
         let url = format!(
             "https://api.github.com/repos/{}/{}/releases/latest",
             self.repo_owner, self.repo_name
         );
 
-        let client = reqwest::blocking::Client::builder()
+        let client = reqwest::Client::builder()
             .user_agent("inventory-app")
             .build()
             .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
@@ -55,6 +55,7 @@ impl UpdateChecker {
         let response = client
             .get(&url)
             .send()
+            .await
             .map_err(|e| format!("Failed to fetch releases: {}", e))?;
 
         if !response.status().is_success() {
@@ -63,6 +64,7 @@ impl UpdateChecker {
 
         let release: GitHubRelease = response
             .json()
+            .await
             .map_err(|e| format!("Failed to parse release data: {}", e))?;
 
         // Remove 'v' prefix if present for comparison
@@ -97,8 +99,8 @@ impl UpdateChecker {
         }
     }
 
-    pub fn download_installer(&self, download_url: &str) -> Result<PathBuf, String> {
-        let client = reqwest::blocking::Client::builder()
+    pub async fn download_installer(&self, download_url: &str) -> Result<PathBuf, String> {
+        let client = reqwest::Client::builder()
             .user_agent("inventory-app")
             .build()
             .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
@@ -106,6 +108,7 @@ impl UpdateChecker {
         let response = client
             .get(download_url)
             .send()
+            .await
             .map_err(|e| format!("Failed to download installer: {}", e))?;
 
         if !response.status().is_success() {
@@ -128,6 +131,7 @@ impl UpdateChecker {
         // Download the file
         let bytes = response
             .bytes()
+            .await
             .map_err(|e| format!("Failed to read download data: {}", e))?;
 
         std::fs::write(&file_path, &bytes)

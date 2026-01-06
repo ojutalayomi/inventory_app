@@ -1,0 +1,153 @@
+name: Release (Modern Packager)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos
+            os: macos-latest
+            target: universal-apple-darwin
+          - platform: windows
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - platform: linux
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libx11-dev libxext-dev \
+            libxft-dev libxinerama-dev libxcursor-dev libxrender-dev \
+            libxfixes-dev libgl1-mesa-dev libglu1-mesa-dev \
+            libpango1.0-dev libcairo2-dev libgdk-pixbuf-2.0-dev
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install cargo-packager
+        run: cargo install cargo-packager --locked
+
+      - name: Build and package
+        run: cargo packager --release --formats ${{ matrix.platform == 'windows' && 'nsis' || matrix.platform == 'macos' && 'dmg' || 'deb,appimage' }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory_app-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+
+  create-release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: List artifacts (debug)
+        run: |
+          echo "Artifacts directory structure:"
+          find ./artifacts -type f
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Inventory Manager ${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          files: ./artifacts/**/*
+          body: |
+            ## 🎉 Inventory Manager ${{ steps.version.outputs.VERSION }}
+            
+            A modern, cross-platform inventory management application built with Rust & Iced.
+            
+            ### 📦 Downloads
+            
+            Choose the appropriate file for your operating system:
+            
+            - **macOS** (11.0+): `*.dmg` - Open and drag to Applications
+            - **Windows** (10+): `*.exe` or `*.msi` - Run the installer
+            - **Linux**: 
+              - `*.deb` - For Debian/Ubuntu: `sudo dpkg -i inventory_app*.deb`
+              - `*.AppImage` - For any distro: `chmod +x inventory_app*.AppImage && ./inventory_app*.AppImage`
+            
+            ### ✨ Features
+            
+            - 📊 Complete inventory tracking
+            - 👥 User management with role-based access
+            - 🔔 Low stock alerts
+            - 📝 Built-in note editor
+            - 🔍 Advanced search and filtering
+            - 🧮 Integrated calculator
+            - 📋 Audit logging
+            - 🔄 Auto-update notifications
+            - 🎨 Dark/Light theme support
+            
+            ### 🔐 Security Note
+            
+            **First-time users:** Your operating system may show a security warning because this app is not code-signed. This is expected for open-source releases.
+            
+            - **Windows**: Click "More info" → "Run anyway"
+            - **macOS**: Right-click → Open → Confirm
+            - **Linux**: No issues (unless using AppImage, then make it executable first)
+            
+            ### 📝 What's New
+            
+            See the [commit history](https://github.com/ojutalayomi/inventory_app/commits/${{ steps.version.outputs.VERSION }}) for detailed changes.
+            
+            ### 🐛 Bug Reports
+            
+            Found an issue? [Open a bug report](https://github.com/ojutalayomi/inventory_app/issues/new)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -7,7 +7,7 @@ pub fn view<'a>(
     settings: &'a AppSettings,
     interval_input: &'a str,
     category_input: &'a str,
-    latest_version: Option<&'a crate::messages::UpdateInfo>,
+    latest_version: Option<&'a crate::update_checker::UpdateInfo>,
 ) -> Element<'a, Message> {
     let title = text("Settings").size(32);
 
@@ -249,12 +249,13 @@ pub fn view<'a>(
         }),
         row![
             text(format!("Current Version: v{}", current_version)).size(14),
-            if let Some(update) = latest_version {
-                button(format!("🔔 Update Available: {}", update.version))
-                    .on_press(Message::DownloadUpdate(update.download_url.clone()))
-                    .padding(8)
-                    .style(
-                        |_theme: &iced::Theme, _status: iced::widget::button::Status| {
+            match latest_version {
+                Some(update) => {
+                    button(text(format!("🔔 Update Available: {}", update.version)))
+                        .on_press(Message::DownloadUpdate(update.download_url.clone()))
+                        .padding(8)
+                        .style(
+                            |_theme: &iced::Theme, _status: iced::widget::button::Status| {
                             iced::widget::button::Style {
                                 background: Some(iced::Background::Color(iced::Color::from_rgb(
                                     0.2, 0.6, 0.3,
@@ -268,10 +269,12 @@ pub fn view<'a>(
                             }
                         }
                     )
-            } else {
-                button("Check for Updates")
-                    .on_press(Message::CheckForUpdates)
-                    .padding(8)
+                }
+                None => {
+                    button("Check for Updates")
+                        .on_press(Message::CheckForUpdates)
+                        .padding(8)
+                }
             },
         ]
         .spacing(10)
@@ -317,7 +320,7 @@ pub fn view<'a>(
     .spacing(5)
     .padding(20);
 
-    let content = scrollable(
+    let content: Element<'a, Message> = scrollable(
         column![
             title,
             container(auto_save_section).style(|_theme: &iced::Theme| {
@@ -401,7 +404,7 @@ pub fn view<'a>(
         ].width(Length::Fill)
         .spacing(15)
         .padding(20),
-    );
+    ).into();
 
-    content.into()
+    content
 }

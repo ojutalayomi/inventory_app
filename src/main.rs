@@ -9,6 +9,7 @@ mod audit;
 mod auth;
 mod calculator;
 mod errors;
+mod icon;
 mod inventory;
 mod messages;
 mod note;
@@ -39,6 +40,7 @@ fn main() -> iced::Result {
     .window(window::Settings {
         size: iced::Size::new(1200.0, 800.0),
         min_size: Some(iced::Size::new(900.0, 600.0)),
+        icon: icon::load_icon(),
         ..Default::default()
     })
     .run_with(InventoryApp::new)
@@ -111,7 +113,7 @@ struct InventoryApp {
 
     // Update state
     update_checker: update_checker::UpdateChecker,
-    latest_version: Option<messages::UpdateInfo>,
+    latest_version: Option<update_checker::UpdateInfo>,
     show_update_notification: bool,
     update_download_progress: Option<f32>,
 
@@ -258,7 +260,7 @@ impl InventoryApp {
                     let update_checker = self.update_checker.clone();
                     let check_update_task = Task::perform(
                         async move {
-                            update_checker.check_for_updates()
+                            update_checker.check_for_updates().await
                         },
                         Message::UpdateCheckComplete,
                     );
@@ -1020,7 +1022,7 @@ impl InventoryApp {
                 let update_checker = self.update_checker.clone();
                 return Task::perform(
                     async move {
-                        update_checker.check_for_updates()
+                        update_checker.check_for_updates().await
                     },
                     Message::UpdateCheckComplete,
                 );
@@ -1045,7 +1047,7 @@ impl InventoryApp {
                 let update_checker = self.update_checker.clone();
                 return Task::perform(
                     async move {
-                        update_checker.download_installer(&download_url)
+                        update_checker.download_installer(&download_url).await
                     },
                     |result| match result {
                         Ok(path) => Message::InstallUpdate(path),
