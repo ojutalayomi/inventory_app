@@ -79,11 +79,30 @@ jobs:
         if: matrix.platform == 'linux'
         run: cargo packager --release --formats deb,appimage
 
-      - name: Upload artifacts
+      - name: Upload artifacts (macOS)
+        if: startsWith(matrix.platform, 'macos')
         uses: actions/upload-artifact@v4
         with:
           name: inventory_app-${{ matrix.platform }}
-          path: dist/*
+          path: dist/*.dmg
+          if-no-files-found: error
+
+      - name: Upload artifacts (Windows)
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory_app-${{ matrix.platform }}
+          path: dist/*.exe
+          if-no-files-found: error
+
+      - name: Upload artifacts (Linux)
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory_app-${{ matrix.platform }}
+          path: |
+            dist/*.deb
+            dist/*.AppImage
           if-no-files-found: error
 
   create-release:
