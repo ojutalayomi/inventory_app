@@ -79,24 +79,6 @@ else
     exit 1
 fi
 
-# Update version in Packager.toml
-echo -e "${GREEN}Updating version in Packager.toml...${NC}"
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS
-    sed -i '' "s/^version = \".*\"/version = \"${VERSION}\"/" Packager.toml
-else
-    # Linux
-    sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" Packager.toml
-fi
-
-# Verify the change
-if grep -q "version = \"${VERSION}\"" Packager.toml; then
-    echo -e "${GREEN}✓ Packager.toml version updated successfully${NC}"
-else
-    echo -e "${RED}Error: Failed to update version in Packager.toml${NC}"
-    exit 1
-fi
-
 # Update Cargo.lock
 echo -e "${GREEN}Updating Cargo.lock...${NC}"
 cargo check --quiet
@@ -120,7 +102,7 @@ echo "Tag: ${TAG}"
 echo "Workflow: release-packager (modern installers)"
 echo ""
 echo "Changes to be committed:"
-git diff --stat Cargo.toml Packager.toml Cargo.lock
+git diff --stat Cargo.toml Cargo.lock
 
 echo ""
 read -p "Commit changes and create tag? (y/N): " -n 1 -r
@@ -132,7 +114,7 @@ fi
 
 # Commit changes
 echo -e "${GREEN}Committing changes...${NC}"
-git add Cargo.toml Packager.toml Cargo.lock
+git add Cargo.toml Cargo.lock
 git commit -m "Release version ${VERSION}"
 
 # Create and push tag

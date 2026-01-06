@@ -42,11 +42,12 @@ panic = "abort"     # Smaller binary
 ## 📦 Packaging with cargo-packager
 
 ### Configuration
-Your `Packager.toml` defines:
+Your `Cargo.toml` contains `[package.metadata.packager]` section which defines:
 - App name, version, and metadata
 - Platform-specific settings
 - Dependencies for each OS
 - Output directory (`dist/`)
+- Icon files
 
 ### Platform-Specific Builds
 
@@ -86,7 +87,7 @@ The project uses **`.github/workflows/release-packager.yml`** which:
 ```
 
 The script will:
-- ✅ Update version in `Cargo.toml` and `Packager.toml`
+- ✅ Update version in `Cargo.toml` 
 - ✅ Update `Cargo.lock`
 - ✅ Build and verify compilation
 - ✅ Create git commit and tag
@@ -94,14 +95,14 @@ The script will:
 
 **Option 2: Manual process**
 ```bash
-# 1. Update versions
-# Edit Cargo.toml and Packager.toml: version = "0.2.0"
+# 1. Update version
+# Edit Cargo.toml: version = "0.2.0"
 
 # 2. Update Cargo.lock
 cargo check
 
 # 3. Commit and tag
-git add Cargo.toml Packager.toml Cargo.lock
+git add Cargo.toml Cargo.lock
 git commit -m "Release version 0.2.0"
 git tag v0.2.0
 git push origin main
@@ -145,9 +146,9 @@ Without signing, users see warnings:
    - `APPLE_CERTIFICATE_PASSWORD`
    - `APPLE_ID`
    - `APPLE_TEAM_ID`
-3. Update `Packager.toml`:
+3. Update `Cargo.toml` (add to `[package.metadata.packager.macos]`):
    ```toml
-   [macos]
+   [package.metadata.packager.macos]
    signing-identity = "Developer ID Application: Your Name (TEAM_ID)"
    ```
 
