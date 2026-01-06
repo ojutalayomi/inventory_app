@@ -1,3 +1,14 @@
 /target
 WARP.md
 /dist
+
+# Documentation files (temporary/internal)
+*_FIX.md
+*_GUIDE.md
+*_WORKFLOW*.md
+*_STATUS.md
+*_SYSTEM.md
+*_IMPLEMENTATION.md
+
+# Keep README (important for repository)
+!README.md
