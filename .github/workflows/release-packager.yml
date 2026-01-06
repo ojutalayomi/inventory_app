@@ -15,12 +15,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: macos
+          - platform: macos-intel
+            os: macos-13
+            arch: x86_64
+          - platform: macos-silicon
             os: macos-latest
+            arch: aarch64
           - platform: windows
             os: windows-latest
+            arch: x86_64
           - platform: linux
             os: ubuntu-latest
+            arch: x86_64
 
     runs-on: ${{ matrix.os }}
     
@@ -44,25 +50,25 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.arch }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo index
         uses: actions/cache@v4
         with:
           path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.arch }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo build
         uses: actions/cache@v4
         with:
           path: target
-          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.arch }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install cargo-packager
         run: cargo install cargo-packager --locked
 
       - name: Build and package (macOS)
-        if: matrix.platform == 'macos'
+        if: startsWith(matrix.platform, 'macos')
         run: cargo packager --release --formats app,dmg
 
       - name: Build and package (Windows)
@@ -119,7 +125,10 @@ jobs:
             
             Choose the appropriate file for your operating system:
             
-            - **macOS** (11.0+): `*.dmg` - Open and drag to Applications
+            - **macOS** (11.0+): 
+              - `*x86_64*.dmg` - For Intel Macs
+              - `*aarch64*.dmg` - For Apple Silicon (M1/M2/M3/M4)
+              - Not sure? Run `uname -m` in Terminal (x86_64 = Intel, arm64 = Apple Silicon)
             - **Windows** (10+): `*.exe` or `*.msi` - Run the installer
             - **Linux**: 
               - `*.deb` - For Debian/Ubuntu: `sudo dpkg -i inventory_app*.deb`
