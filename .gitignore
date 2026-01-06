@@ -12,3 +12,6 @@ WARP.md
 
 # Keep README (important for repository)
 !README.md
+
+.env*
+!.env.example
