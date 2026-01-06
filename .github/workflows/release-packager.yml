@@ -153,5 +153,5 @@ jobs:
             
             Found an issue? [Open a bug report](https://github.com/ojutalayomi/inventory_app/issues/new)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
