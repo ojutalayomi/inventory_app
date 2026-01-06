@@ -81,11 +81,11 @@ fi
 
 # Update Cargo.lock
 echo -e "${GREEN}Updating Cargo.lock...${NC}"
-cargo check --quiet
+cargo check --quiet 2>/dev/null
 
 # Build to verify everything compiles
 echo -e "${GREEN}Building project to verify...${NC}"
-cargo build --release
+cargo build --release 2>/dev/null
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ Build successful${NC}"
