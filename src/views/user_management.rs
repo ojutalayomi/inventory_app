@@ -11,13 +11,14 @@ pub fn view<'a>(
     new_password: &'a str,
     new_role: Option<UserRole>,
     error_message: Option<&'a str>,
+    theme: &'a crate::messages::AppTheme,
 ) -> Element<'a, Message> {
     if !current_user_role.can_manage_users() {
         return container(
             text("Access Denied: Admin privileges required")
                 .size(20)
-                .style(|_theme: &iced::Theme| iced::widget::text::Style {
-                    color: Some(iced::Color::from_rgb(0.9, 0.3, 0.3)),
+                .style(move |_iced_theme: &iced::Theme| iced::widget::text::Style {
+                    color: Some(crate::theme::danger_color(theme)),
                 }),
         )
         .width(Length::Fill)
@@ -79,12 +80,10 @@ pub fn view<'a>(
         .spacing(10)
         .padding(15),
     )
-    .style(|_theme: &iced::Theme| container::Style {
-        background: Some(iced::Background::Color(iced::Color::from_rgb(
-            0.12, 0.12, 0.12,
-        ))),
+    .style(move |_iced_theme: &iced::Theme| container::Style {
+        background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
         border: iced::Border {
-            color: iced::Color::from_rgb(0.3, 0.3, 0.3),
+            color: crate::theme::border_color(theme),
             width: 1.0,
             radius: 5.0.into(),
         },
@@ -146,7 +145,7 @@ pub fn view<'a>(
                             |_theme: &iced::Theme, _status: iced::widget::button::Status| {
                                 iced::widget::button::Style {
                                     background: Some(iced::Background::Color(
-                                        iced::Color::from_rgb(0.7, 0.2, 0.2),
+                                        crate::theme::danger_color(theme),
                                     )),
                                     text_color: iced::Color::WHITE,
                                     border: iced::Border {
@@ -164,12 +163,10 @@ pub fn view<'a>(
             .spacing(10)
             .padding(10),
         )
-        .style(|_theme: &iced::Theme| container::Style {
-            background: Some(iced::Background::Color(iced::Color::from_rgb(
-                0.1, 0.1, 0.1,
-            ))),
+        .style(move |_iced_theme: &iced::Theme| container::Style {
+            background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
             border: iced::Border {
-                color: iced::Color::from_rgb(0.25, 0.25, 0.25),
+                color: crate::theme::border_color(theme),
                 width: 1.0,
                 radius: 3.0.into(),
             },
@@ -200,9 +197,9 @@ pub fn view<'a>(
 
     if let Some(error) = error_message {
         content = content.push(
-            container(text(error).size(14).style(|_theme: &iced::Theme| {
+            container(text(error).size(14).style(move |_iced_theme: &iced::Theme| {
                 iced::widget::text::Style {
-                    color: Some(iced::Color::from_rgb(0.9, 0.3, 0.3)),
+                    color: Some(crate::theme::danger_color(theme)),
                 }
             }))
             .padding(10),

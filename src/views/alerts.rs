@@ -4,10 +4,13 @@ use iced::{Element, Length};
 use crate::alerts::{AlertManager, StockAlert};
 use crate::messages::Message;
 use crate::user::UserRole;
+use crate::theme;
+use crate::icons;
 
 pub fn view<'a>(
     alert_manager: &'a AlertManager,
     _current_user_role: UserRole,
+    theme: &'a crate::messages::AppTheme,
 ) -> Element<'a, Message> {
     let title = text("Stock Alerts & Notifications").size(28);
 
@@ -63,12 +66,10 @@ pub fn view<'a>(
         .spacing(10)
         .padding(15),
     )
-    .style(|_theme: &iced::Theme| container::Style {
-        background: Some(iced::Background::Color(iced::Color::from_rgb(
-            0.12, 0.12, 0.12,
-        ))),
+    .style(move |_iced_theme: &iced::Theme| container::Style {
+        background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
         border: iced::Border {
-            color: iced::Color::from_rgb(0.3, 0.3, 0.3),
+            color: crate::theme::border_color(theme),
             width: 1.0,
             radius: 8.0.into(),
         },
@@ -85,14 +86,14 @@ pub fn view<'a>(
             .spacing(5)
             .align_x(iced::Alignment::Center),
             column![
-                text("Critical:").size(14).style(|_theme: &iced::Theme| {
+                text("Critical:").size(14).style(move |_iced_theme: &iced::Theme| {
                     iced::widget::text::Style {
-                        color: Some(iced::Color::from_rgb(0.9, 0.3, 0.3)),
+                        color: Some(crate::theme::danger_color(theme)),
                     }
                 }),
-                text(critical_alerts.len()).size(24).style(|_theme: &iced::Theme| {
+                text(critical_alerts.len()).size(24).style(move |_iced_theme: &iced::Theme| {
                     iced::widget::text::Style {
-                        color: Some(iced::Color::from_rgb(0.9, 0.3, 0.3)),
+                        color: Some(crate::theme::danger_color(theme)),
                     }
                 }),
             ]
@@ -112,12 +113,10 @@ pub fn view<'a>(
         .spacing(40)
         .padding(15),
     )
-    .style(|_theme: &iced::Theme| container::Style {
-        background: Some(iced::Background::Color(iced::Color::from_rgb(
-            0.12, 0.12, 0.12,
-        ))),
+    .style(move |_iced_theme: &iced::Theme| container::Style {
+        background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
         border: iced::Border {
-            color: iced::Color::from_rgb(0.3, 0.3, 0.3),
+            color: crate::theme::border_color(theme),
             width: 1.0,
             radius: 8.0.into(),
         },
@@ -132,7 +131,7 @@ pub fn view<'a>(
     let clear_button = button("Clear Acknowledged")
         .on_press(Message::ClearAcknowledgedAlerts)
         .padding(8)
-        .style(|_theme: &iced::Theme, _status: iced::widget::button::Status| {
+        .style(move |_iced_theme: &iced::Theme, _status: iced::widget::button::Status| {
             iced::widget::button::Style {
                 background: Some(iced::Background::Color(iced::Color::from_rgb(
                     0.5, 0.3, 0.3,
@@ -156,8 +155,8 @@ pub fn view<'a>(
             container(
                 text("No active alerts")
                     .size(16)
-                    .style(|_theme: &iced::Theme| iced::widget::text::Style {
-                        color: Some(iced::Color::from_rgb(0.5, 0.5, 0.5)),
+                    .style(move |_iced_theme: &iced::Theme| iced::widget::text::Style {
+                        color: Some(crate::theme::border_color(theme)),
                     }),
             )
             .padding(20)
@@ -166,7 +165,7 @@ pub fn view<'a>(
         );
     } else {
         for alert in active_alerts {
-            alerts_list = alerts_list.push(build_alert_card(alert));
+            alerts_list = alerts_list.push(build_alert_card(alert, theme));
         }
     }
 
@@ -189,8 +188,18 @@ pub fn view<'a>(
     content.into()
 }
 
-fn build_alert_card<'a>(alert: &'a StockAlert) -> Element<'a, Message> {
-    let icon_text = text(alert.alert_type.icon()).size(32);
+fn build_alert_card<'a>(alert: &'a StockAlert, theme: &'a crate::messages::AppTheme) -> Element<'a, Message> {
+    // Map AlertType to Icon enum
+    let alert_icon = match alert.alert_type {
+        crate::alerts::AlertType::OutOfStock => icons::Icon::XCircle,
+        crate::alerts::AlertType::LowStock => icons::Icon::AlertCircle,
+        crate::alerts::AlertType::CriticallyLow => icons::Icon::AlertTriangle,
+    };
+    let icon_widget = alert_icon.view_with_color(
+        icons::IconSize::Large,
+        Some(alert.alert_type.color()),
+        theme,
+    );
 
     let status_badge = container(
         text(format!("{}", alert.alert_type))
@@ -214,9 +223,16 @@ fn build_alert_card<'a>(alert: &'a StockAlert) -> Element<'a, Message> {
             .on_press(Message::AcknowledgeAlert(alert.id.clone()))
             .padding(5)
     } else {
-        button("✓ Acknowledged")
+        button(
+            row![
+                icons::Icon::CheckCircle.view(icons::IconSize::Small, theme),
+                text("Acknowledged"),
+            ]
+            .spacing(theme::SPACING_XS)
+            .align_y(iced::Alignment::Center)
+        )
             .padding(5)
-            .style(|_theme: &iced::Theme, _status: iced::widget::button::Status| {
+            .style(move |_iced_theme: &iced::Theme, _status: iced::widget::button::Status| {
                 iced::widget::button::Style {
                     background: Some(iced::Background::Color(iced::Color::from_rgb(
                         0.3, 0.6, 0.3,
@@ -229,7 +245,7 @@ fn build_alert_card<'a>(alert: &'a StockAlert) -> Element<'a, Message> {
 
     container(
         row![
-            icon_text,
+            icon_widget,
             column![
                 row![
                     text(&alert.item_name).size(18),
@@ -238,8 +254,8 @@ fn build_alert_card<'a>(alert: &'a StockAlert) -> Element<'a, Message> {
                 .spacing(10)
                 .align_y(iced::Alignment::Center),
                 text(format!("SKU: {}", alert.item_sku)).size(12).style(
-                    |_theme: &iced::Theme| iced::widget::text::Style {
-                        color: Some(iced::Color::from_rgb(0.7, 0.7, 0.7)),
+                    move |_iced_theme: &iced::Theme| iced::widget::text::Style {
+                        color: Some(crate::theme::text_secondary_color(theme)),
                     }
                 ),
                 text("").size(5),
@@ -247,15 +263,15 @@ fn build_alert_card<'a>(alert: &'a StockAlert) -> Element<'a, Message> {
                     text(format!("Current Stock: {} items", alert.current_quantity)).size(14),
                     text(format!("Threshold: {} items", alert.threshold))
                         .size(12)
-                        .style(|_theme: &iced::Theme| iced::widget::text::Style {
-                            color: Some(iced::Color::from_rgb(0.6, 0.6, 0.6)),
+                        .style(move |_iced_theme: &iced::Theme| iced::widget::text::Style {
+                            color: Some(crate::theme::text_secondary_color(theme)),
                         }),
                 ]
                 .spacing(20),
                 text(format!("Detected: {}", alert.formatted_timestamp()))
                     .size(11)
-                    .style(|_theme: &iced::Theme| iced::widget::text::Style {
-                        color: Some(iced::Color::from_rgb(0.5, 0.5, 0.5)),
+                    .style(move |_iced_theme: &iced::Theme| iced::widget::text::Style {
+                        color: Some(crate::theme::text_tertiary_color(theme)),
                     }),
             ]
             .spacing(5)
@@ -266,12 +282,10 @@ fn build_alert_card<'a>(alert: &'a StockAlert) -> Element<'a, Message> {
         .padding(15)
         .align_y(iced::Alignment::Center),
     )
-    .style(|_theme: &iced::Theme| container::Style {
-        background: Some(iced::Background::Color(iced::Color::from_rgb(
-            0.1, 0.1, 0.1,
-        ))),
+    .style(move |_iced_theme: &iced::Theme| container::Style {
+        background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
         border: iced::Border {
-            color: iced::Color::from_rgb(0.3, 0.3, 0.3),
+            color: crate::theme::border_color(theme),
             width: 1.0,
             radius: 8.0.into(),
         },

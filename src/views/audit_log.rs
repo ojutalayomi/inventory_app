@@ -5,13 +5,13 @@ use crate::audit::{AuditAction, AuditEntry};
 use crate::messages::Message;
 use crate::user::UserRole;
 
-pub fn view<'a>(entries: &[&'a AuditEntry], current_user_role: UserRole) -> Element<'a, Message> {
+pub fn view<'a>(entries: &[&'a AuditEntry], current_user_role: UserRole, theme: &'a crate::messages::AppTheme) -> Element<'a, Message> {
     if !current_user_role.can_view_audit() {
         return container(
             text("Access Denied: Manager or Admin privileges required")
                 .size(20)
-                .style(|_theme: &iced::Theme| iced::widget::text::Style {
-                    color: Some(iced::Color::from_rgb(0.9, 0.3, 0.3)),
+                .style(move |_iced_theme: &iced::Theme| iced::widget::text::Style {
+                    color: Some(crate::theme::danger_color(theme)),
                 }),
         )
         .width(Length::Fill)
@@ -43,12 +43,10 @@ pub fn view<'a>(entries: &[&'a AuditEntry], current_user_role: UserRole) -> Elem
         .spacing(10)
         .padding(10),
     )
-    .style(|_theme: &iced::Theme| container::Style {
-        background: Some(iced::Background::Color(iced::Color::from_rgb(
-            0.15, 0.15, 0.15,
-        ))),
+    .style(move |_iced_theme: &iced::Theme| container::Style {
+        background: Some(iced::Background::Color(crate::theme::surface_elevated_color(theme))),
         border: iced::Border {
-            color: iced::Color::from_rgb(0.3, 0.3, 0.3),
+            color: crate::theme::border_color(theme),
             width: 1.0,
             radius: 3.0.into(),
         },
@@ -62,8 +60,8 @@ pub fn view<'a>(entries: &[&'a AuditEntry], current_user_role: UserRole) -> Elem
             container(
                 text("No audit entries yet")
                     .size(16)
-                    .style(|_theme: &iced::Theme| iced::widget::text::Style {
-                        color: Some(iced::Color::from_rgb(0.5, 0.5, 0.5)),
+                    .style(move |_iced_theme: &iced::Theme| iced::widget::text::Style {
+                        color: Some(crate::theme::border_color(theme)),
                     }),
             )
             .padding(20)
@@ -89,7 +87,7 @@ pub fn view<'a>(entries: &[&'a AuditEntry], current_user_role: UserRole) -> Elem
                         AuditAction::ItemDeleted
                         | AuditAction::NoteDeleted
                         | AuditAction::UserDeleted
-                        | AuditAction::DataCleared => iced::Color::from_rgb(0.9, 0.3, 0.3),
+                        | AuditAction::DataCleared => crate::theme::danger_color(theme),
                         AuditAction::ItemCreated
                         | AuditAction::NoteCreated
                         | AuditAction::UserCreated => iced::Color::from_rgb(0.3, 0.8, 0.3),
@@ -121,12 +119,10 @@ pub fn view<'a>(entries: &[&'a AuditEntry], current_user_role: UserRole) -> Elem
                 .spacing(10)
                 .padding(10),
             )
-            .style(|_theme: &iced::Theme| container::Style {
-                background: Some(iced::Background::Color(iced::Color::from_rgb(
-                    0.1, 0.1, 0.1,
-                ))),
+            .style(move |_iced_theme: &iced::Theme| container::Style {
+                background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
                 border: iced::Border {
-                    color: iced::Color::from_rgb(0.2, 0.2, 0.2),
+                    color: crate::theme::border_color(theme),
                     width: 1.0,
                     radius: 3.0.into(),
                 },

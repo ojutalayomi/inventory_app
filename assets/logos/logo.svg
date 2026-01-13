@@ -1,0 +1,14 @@
+<svg width="280" height="64" viewBox="0 0 280 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="fullLogoTitle">
+    <title id="fullLogoTitle">SmartStock Inventory Full Logo</title>
+    
+    <g id="logo-symbol-left">
+        <path fill="#1A3A5C" d="M32 60L4 46V18L32 32V60Z"/>
+        <path fill="#244D7A" d="M60 18L32 32V60L60 46V18Z"/>
+        <path fill="#2F629A" d="M32 4L60 18L32 32L4 18L32 4Z"/>
+        <path fill="#2EBFA5" d="M32 18L19 25.5L22.5 31L32 25.5L41.5 31L45 25.5L32 18Z"/>
+        <path fill="#2EBFA5" d="M32 28L22 34V42L32 48L42 42V34L32 28Z"/>
+    </g>
+
+    <text x="76" y="30" fill="#1A3A5C" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="22" letter-spacing="1">SMARTSTOCK</text>
+    <text x="76" y="52" fill="#2EBFA5" font-family="Arial, Helvetica, sans-serif" font-weight="500" font-size="16" letter-spacing="2">INVENTORY</text>
+</svg>

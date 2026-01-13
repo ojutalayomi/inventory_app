@@ -1,196 +1,192 @@
-use iced::widget::{button, column, container, mouse_area, row, text};
-use iced::{Element, Length};
+use iced::widget::{button, column, row, text};
+use iced::{Color, Element, Length};
 
-use crate::messages::{CalculatorOp, Message};
+use crate::messages::{AppTheme, CalculatorOp, Message};
+use crate::theme;
+use crate::icons;
 
-pub fn view<'a>(display: &'a str) -> Element<'a, Message> {
-    let title_bar = mouse_area(
-        container(
-            text("Calculator - Drag to Move")
-                .size(14)
-                .width(Length::Fill)
-                .align_x(iced::alignment::Horizontal::Center),
-        )
+pub fn view<'a>(display: &'a str, app_theme: &'a AppTheme) -> Element<'a, Message> {
+    // Modern display with gradient text
+    let display_container = text(if display.is_empty() { "0" } else { display })
+        .size(theme::TEXT_DISPLAY)
+        .align_x(iced::alignment::Horizontal::Right)
         .width(Length::Fill)
-        .padding(8)
-        .style(|_theme: &iced::Theme| container::Style {
-            background: Some(iced::Background::Color(iced::Color::from_rgb(
-                0.2, 0.25, 0.3,
-            ))),
-            ..Default::default()
-        }),
-    )
-    .on_press(Message::CalculatorDragStart);
-
-    let display_container = container(text(display).size(32).width(Length::Fill))
-        .padding(15)
-        .width(Length::Fill)
-        .style(|_theme: &iced::Theme| container::Style {
-            background: Some(iced::Background::Color(iced::Color::from_rgb(
-                0.1, 0.1, 0.1,
-            ))),
-            border: iced::Border {
-                color: iced::Color::from_rgb(0.3, 0.3, 0.3),
-                width: 1.0,
-                radius: 5.0.into(),
-            },
-            ..Default::default()
+        .style(move |_theme: &iced::Theme| text::Style {
+            color: Some(theme::primary_color(app_theme)),
         });
 
-    let button_style =
-        |_theme: &iced::Theme, _status: iced::widget::button::Status| iced::widget::button::Style {
-            background: Some(iced::Background::Color(iced::Color::from_rgb(
-                0.25, 0.25, 0.25,
-            ))),
-            border: iced::Border {
-                color: iced::Color::from_rgb(0.4, 0.4, 0.4),
-                width: 1.0,
-                radius: 5.0.into(),
-            },
-            text_color: iced::Color::WHITE,
-            ..Default::default()
-        };
-
-    let op_button_style =
-        |_theme: &iced::Theme, _status: iced::widget::button::Status| iced::widget::button::Style {
-            background: Some(iced::Background::Color(iced::Color::from_rgb(
-                0.3, 0.4, 0.5,
-            ))),
-            border: iced::Border {
-                color: iced::Color::from_rgb(0.4, 0.5, 0.6),
-                width: 1.0,
-                radius: 5.0.into(),
-            },
-            text_color: iced::Color::WHITE,
-            ..Default::default()
-        };
-
-    let row1 = row![
-        button(text("7").size(20))
-            .on_press(Message::CalculatorInput("7".to_string()))
+    // Helper function for number buttons
+    let make_num_button = |num: &'a str| {
+        button(text(num).size(theme::TEXT_H3))
+            .on_press(Message::CalculatorInput(num.to_string()))
             .width(Length::Fill)
-            .height(50)
-            .style(button_style),
-        button(text("8").size(20))
-            .on_press(Message::CalculatorInput("8".to_string()))
-            .width(Length::Fill)
-            .height(50)
-            .style(button_style),
-        button(text("9").size(20))
-            .on_press(Message::CalculatorInput("9".to_string()))
-            .width(Length::Fill)
-            .height(50)
-            .style(button_style),
-        button(text("÷").size(20))
-            .on_press(Message::CalculatorOperation(CalculatorOp::Divide))
-            .width(Length::Fill)
-            .height(50)
-            .style(op_button_style),
-    ]
-    .spacing(5);
-
-    let row2 = row![
-        button(text("4").size(20))
-            .on_press(Message::CalculatorInput("4".to_string()))
-            .width(Length::Fill)
-            .height(50)
-            .style(button_style),
-        button(text("5").size(20))
-            .on_press(Message::CalculatorInput("5".to_string()))
-            .width(Length::Fill)
-            .height(50)
-            .style(button_style),
-        button(text("6").size(20))
-            .on_press(Message::CalculatorInput("6".to_string()))
-            .width(Length::Fill)
-            .height(50)
-            .style(button_style),
-        button(text("×").size(20))
-            .on_press(Message::CalculatorOperation(CalculatorOp::Multiply))
-            .width(Length::Fill)
-            .height(50)
-            .style(op_button_style),
-    ]
-    .spacing(5);
-
-    let row3 = row![
-        button(text("1").size(20))
-            .on_press(Message::CalculatorInput("1".to_string()))
-            .width(Length::Fill)
-            .height(50)
-            .style(button_style),
-        button(text("2").size(20))
-            .on_press(Message::CalculatorInput("2".to_string()))
-            .width(Length::Fill)
-            .height(50)
-            .style(button_style),
-        button(text("3").size(20))
-            .on_press(Message::CalculatorInput("3".to_string()))
-            .width(Length::Fill)
-            .height(50)
-            .style(button_style),
-        button(text("-").size(20))
-            .on_press(Message::CalculatorOperation(CalculatorOp::Subtract))
-            .width(Length::Fill)
-            .height(50)
-            .style(op_button_style),
-    ]
-    .spacing(5);
-
-    let row4 = row![
-        button(text("0").size(20))
-            .on_press(Message::CalculatorInput("0".to_string()))
-            .width(Length::Fill)
-            .height(50)
-            .style(button_style),
-        button(text(".").size(20))
-            .on_press(Message::CalculatorInput(".".to_string()))
-            .width(Length::Fill)
-            .height(50)
-            .style(button_style),
-        button(text("=").size(20))
-            .on_press(Message::CalculatorEquals)
-            .width(Length::Fill)
-            .height(50)
-            .style(op_button_style),
-        button(text("+").size(20))
-            .on_press(Message::CalculatorOperation(CalculatorOp::Add))
-            .width(Length::Fill)
-            .height(50)
-            .style(op_button_style),
-    ]
-    .spacing(5);
-
-    let clear_button = button(text("Clear").size(18))
-        .on_press(Message::CalculatorClear)
-        .width(Length::Fill)
-        .height(40)
-        .style(
-            |_theme: &iced::Theme, _status: iced::widget::button::Status| {
-                iced::widget::button::Style {
-                    background: Some(iced::Background::Color(iced::Color::from_rgb(
-                        0.6, 0.2, 0.2,
-                    ))),
+            .height(60)
+            .style(move |_theme: &iced::Theme, status: button::Status| {
+                let bg_color = match status {
+                    button::Status::Hovered => theme::surface_elevated_color(app_theme),
+                    _ => theme::surface_color(app_theme),
+                };
+                
+                button::Style {
+                    background: Some(iced::Background::Color(bg_color)),
+                    text_color: theme::text_color(app_theme),
                     border: iced::Border {
-                        color: iced::Color::from_rgb(0.7, 0.3, 0.3),
+                        color: theme::border_color(app_theme),
                         width: 1.0,
-                        radius: 5.0.into(),
+                        radius: theme::RADIUS_MD.into(),
                     },
-                    text_color: iced::Color::WHITE,
+                    shadow: iced::Shadow {
+                        color: Color::from_rgba(0.0, 0.0, 0.0, 0.1),
+                        offset: iced::Vector::new(0.0, 2.0),
+                        blur_radius: 4.0,
+                    },
                     ..Default::default()
                 }
-            },
-        );
+            })
+    };
+
+    // Helper function for operator buttons
+    let make_op_button = |symbol: &'a str, op: CalculatorOp| {
+        button(text(symbol).size(theme::TEXT_H3))
+            .on_press(Message::CalculatorOperation(op))
+            .width(Length::Fill)
+            .height(60)
+            .style(move |_theme: &iced::Theme, status: button::Status| {
+                let bg_color = match status {
+                    button::Status::Hovered => theme::primary_dark_color(app_theme),
+                    _ => theme::primary_color(app_theme),
+                };
+                
+                button::Style {
+                    background: Some(iced::Background::Color(bg_color)),
+                    text_color: Color::WHITE,
+                    border: iced::Border {
+                        color: theme::primary_color(app_theme),
+                        width: 1.0,
+                        radius: theme::RADIUS_MD.into(),
+                    },
+                    shadow: iced::Shadow {
+                        color: Color::from_rgba(0.0, 0.0, 0.0, 0.2),
+                        offset: iced::Vector::new(0.0, 2.0),
+                        blur_radius: 6.0,
+                    },
+                    ..Default::default()
+                }
+            })
+    };
+
+    let row1 = row![
+        make_num_button("7"),
+        make_num_button("8"),
+        make_num_button("9"),
+        make_op_button("÷", CalculatorOp::Divide),
+    ]
+    .spacing(theme::SPACING_SM);
+
+    let row2 = row![
+        make_num_button("4"),
+        make_num_button("5"),
+        make_num_button("6"),
+        make_op_button("×", CalculatorOp::Multiply),
+    ]
+    .spacing(theme::SPACING_SM);
+
+    let row3 = row![
+        make_num_button("1"),
+        make_num_button("2"),
+        make_num_button("3"),
+        make_op_button("-", CalculatorOp::Subtract),
+    ]
+    .spacing(theme::SPACING_SM);
+
+    let row4 = row![
+        make_num_button("0"),
+        make_num_button("."),
+        button(text("=").size(theme::TEXT_H3))
+            .on_press(Message::CalculatorEquals)
+            .width(Length::Fill)
+            .height(60)
+            .style(move |_theme: &iced::Theme, status: button::Status| {
+                let bg_color = match status {
+                    button::Status::Hovered => theme::accent_color(app_theme),
+                    _ => theme::success_color(app_theme),
+                };
+                
+                button::Style {
+                    background: Some(iced::Background::Color(bg_color)),
+                    text_color: Color::WHITE,
+                    border: iced::Border {
+                        color: theme::success_color(app_theme),
+                        width: 1.0,
+                        radius: theme::RADIUS_MD.into(),
+                    },
+                    shadow: iced::Shadow {
+                        color: Color::from_rgba(0.0, 0.0, 0.0, 0.2),
+                        offset: iced::Vector::new(0.0, 2.0),
+                        blur_radius: 6.0,
+                    },
+                    ..Default::default()
+                }
+            }),
+        make_op_button("+", CalculatorOp::Add),
+    ]
+    .spacing(theme::SPACING_SM);
+
+    let clear_button = button(
+        row![
+            icons::Icon::Delete.view(icons::IconSize::Small, app_theme),
+            text("Clear").size(theme::TEXT_BODY_LARGE),
+        ]
+        .spacing(theme::SPACING_SM)
+        .align_y(iced::Alignment::Center)
+    )
+        .on_press(Message::CalculatorClear)
+        .width(Length::Fill)
+        .height(50)
+        .style(move |_theme: &iced::Theme, status: button::Status| {
+            let bg_color = match status {
+                button::Status::Hovered => theme::danger_color(app_theme),
+                _ => Color::from_rgba(
+                    theme::danger_color(app_theme).r,
+                    theme::danger_color(app_theme).g,
+                    theme::danger_color(app_theme).b,
+                    0.8,
+                ),
+            };
+            
+            button::Style {
+                background: Some(iced::Background::Color(bg_color)),
+                text_color: Color::WHITE,
+                border: iced::Border {
+                    color: theme::danger_color(app_theme),
+                    width: 1.0,
+                    radius: theme::RADIUS_MD.into(),
+                },
+                ..Default::default()
+            }
+        });
 
     column![
-        title_bar,
+        row![
+            icons::Icon::Calculator.view(icons::IconSize::Medium, app_theme),
+            text("Calculator")
+                .size(theme::TEXT_H3)
+                .style(move |_theme: &iced::Theme| text::Style {
+                    color: Some(theme::text_color(app_theme)),
+                }),
+        ]
+        .spacing(theme::SPACING_SM)
+        .align_y(iced::Alignment::Center),
+        text("").size(theme::SPACING_SM),
         display_container,
+        text("").size(theme::SPACING_LG),
         row1,
         row2,
         row3,
         row4,
+        text("").size(theme::SPACING_SM),
         clear_button,
     ]
-    .spacing(8)
+    .spacing(theme::SPACING_MD)
     .into()
 }

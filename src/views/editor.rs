@@ -13,6 +13,7 @@ pub fn view<'a>(
     editor_content: &'a text_editor::Content,
     note_title: &'a str,
     delete_confirm_id: Option<&'a String>,
+    theme: &'a crate::messages::AppTheme,
 ) -> Element<'a, Message> {
     // Left sidebar with notes list
     let mut notes_list = Column::new().spacing(5).padding(10);
@@ -90,21 +91,17 @@ pub fn view<'a>(
                 .padding(8),
             )
             .width(Length::Fill)
-            .style(move |_theme: &iced::Theme| container::Style {
+            .style(move |_iced_theme: &iced::Theme| container::Style {
                 background: if is_selected {
-                    Some(iced::Background::Color(iced::Color::from_rgb(
-                        0.25, 0.35, 0.45,
-                    )))
+                    Some(iced::Background::Color(crate::theme::surface_elevated_color(theme)))
                 } else {
-                    Some(iced::Background::Color(iced::Color::from_rgb(
-                        0.15, 0.15, 0.15,
-                    )))
+                    Some(iced::Background::Color(crate::theme::surface_color(theme)))
                 },
                 border: iced::Border {
                     color: if is_selected {
-                        iced::Color::from_rgb(0.35, 0.45, 0.55)
+                        crate::theme::primary_color(theme)
                     } else {
-                        iced::Color::from_rgb(0.25, 0.25, 0.25)
+                        crate::theme::border_color(theme)
                     },
                     width: 1.0,
                     radius: 5.0.into(),
@@ -132,143 +129,138 @@ pub fn view<'a>(
     let sidebar = container(scrollable(notes_list))
         .width(280)
         .height(Length::Fill)
-        .style(|_theme: &iced::Theme| container::Style {
-            background: Some(iced::Background::Color(iced::Color::from_rgb(
-                0.1, 0.1, 0.1,
-            ))),
+        .style(move |_iced_theme: &iced::Theme| container::Style {
+            background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
             border: iced::Border {
-                color: iced::Color::from_rgb(0.2, 0.2, 0.2),
-                width: 1.0,
-                ..Default::default()
+                color: crate::theme::border_color(theme),
+                width: 0.0,
+                radius: 0.0.into(),
             },
             ..Default::default()
         });
 
-    // Right editor area
-    let editor_area = if let Some(_selected_id) = selected_note_id {
+    let main_area = container(
         column![
-            text("Note Title:").size(14),
-            text_input("Enter note title", note_title)
-                .on_input(Message::UpdateNoteTitle)
-                .padding(8)
-                .size(16),
-            text("").size(5),
-            text_editor(editor_content)
-                .on_action(Message::UpdateNoteContent)
-                .height(Length::Fill)
-                .padding(10),
+            row![
+                text("Note Title:").size(14),
+                text_input("Untitled", note_title)
+                    .on_input(Message::UpdateNoteTitle)
+                    .padding(8),
+                button("New Note").on_press(Message::CreateNote).padding(8),
+                if let Some(note_id) = selected_note_id {
+                    button("Delete Note")
+                        .on_press(Message::DeleteNote(note_id.clone()))
+                        .padding(8)
+                } else {
+                    button("Delete Note").padding(8)
+                },
+            ]
+            .spacing(10)
+            .align_y(iced::Alignment::Center),
+            container(
+                text_editor(editor_content)
+                    .on_action(Message::UpdateNoteContent)
+                    .padding(10)
+                    .height(iced::Length::Fill)
+            )
+            .height(iced::Length::Fill),
             row![
                 text(format!("Lines: {}", editor_content.line_count())).size(12),
+                text("|").size(12),
                 text(format!("Characters: {}", editor_content.text().len())).size(12),
             ]
-            .spacing(15)
-            .padding(5),
+            .spacing(5),
         ]
         .spacing(10)
-        .padding(15)
-    } else {
-        column![
+        .padding(10),
+    )
+    .width(Length::Fill)
+    .height(Length::Fill);
+
+    // Create main layout
+    let content = row![sidebar, main_area]
+        .spacing(0)
+        .width(Length::Fill)
+        .height(Length::Fill);
+
+    // If delete confirm dialog needed, overlay it
+    if let Some(_note_id) = delete_confirm_id {
+        iced::widget::stack![
+            content,
             container(
-                text("Select a note or create a new one to start editing")
-                    .size(18)
-                    .style(|_theme: &iced::Theme| {
-                        iced::widget::text::Style {
-                            color: Some(iced::Color::from_rgb(0.5, 0.5, 0.5)),
-                        }
-                    })
+                container(
+                    column![
+                        text("Delete Note?").size(24),
+                        text("").size(10),
+                        text("This action cannot be undone.").size(14),
+                        text("").size(20),
+                        row![
+                            button("Delete")
+                                .on_press(Message::ConfirmDeleteNote)
+                                .padding(10)
+                                .style(
+                                    move |_iced_theme: &iced::Theme, _status: iced::widget::button::Status| {
+                                        iced::widget::button::Style {
+                                            background: Some(iced::Background::Color(
+                                                crate::theme::danger_color(theme),
+                                            )),
+                                            text_color: iced::Color::WHITE,
+                                            border: iced::Border {
+                                                radius: 5.0.into(),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        }
+                                    }
+                                ),
+                            button("Cancel")
+                                .on_press(Message::CloseDeleteConfirm)
+                                .padding(10)
+                                .style(
+                                    move |_iced_theme: &iced::Theme, _status: iced::widget::button::Status| {
+                                        iced::widget::button::Style {
+                                            background: Some(iced::Background::Color(
+                                                crate::theme::surface_elevated_color(theme),
+                                            )),
+                                            text_color: crate::theme::text_color(theme),
+                                            border: iced::Border {
+                                                radius: 5.0.into(),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        }
+                                    }
+                                ),
+                        ]
+                        .spacing(10),
+                    ]
+                    .spacing(5)
+                    .padding(30),
+                )
+                .width(350)
+                .style(move |_iced_theme: &iced::Theme| container::Style {
+                    background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
+                    border: iced::Border {
+                        color: crate::theme::border_color(theme),
+                        width: 2.0,
+                        radius: 10.0.into(),
+                    },
+                    ..Default::default()
+                }),
             )
             .width(Length::Fill)
             .height(Length::Fill)
             .center_x(Length::Fill)
             .center_y(Length::Fill)
-        ]
-    };
-
-    let main_content = container(editor_area)
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .padding(10);
-
-    let layout = row![sidebar, main_content].spacing(0).height(Length::Fill);
-
-    // Show delete confirmation dialog if needed
-    if let Some(_delete_id) = delete_confirm_id {
-        let dialog = container(
-            container(
-                column![
-                    text("Delete Note?").size(24),
-                    text("").size(10),
-                    text("This action cannot be undone.").size(14),
-                    text("").size(20),
-                    row![
-                        button("Delete")
-                            .on_press(Message::ConfirmDeleteNote)
-                            .padding(10)
-                            .style(
-                                |_theme: &iced::Theme, _status: iced::widget::button::Status| {
-                                    iced::widget::button::Style {
-                                        background: Some(iced::Background::Color(
-                                            iced::Color::from_rgb(0.6, 0.2, 0.2),
-                                        )),
-                                        text_color: iced::Color::WHITE,
-                                        border: iced::Border {
-                                            radius: 5.0.into(),
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    }
-                                }
-                            ),
-                        button("Cancel")
-                            .on_press(Message::CloseDeleteConfirm)
-                            .padding(10)
-                            .style(
-                                |_theme: &iced::Theme, _status: iced::widget::button::Status| {
-                                    iced::widget::button::Style {
-                                        background: Some(iced::Background::Color(
-                                            iced::Color::from_rgb(0.3, 0.3, 0.3),
-                                        )),
-                                        text_color: iced::Color::WHITE,
-                                        border: iced::Border {
-                                            radius: 5.0.into(),
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    }
-                                }
-                            ),
-                    ]
-                    .spacing(10),
-                ]
-                .spacing(5)
-                .padding(30),
-            )
-            .width(350)
-            .style(|_theme: &iced::Theme| container::Style {
-                background: Some(iced::Background::Color(iced::Color::from_rgb(
-                    0.15, 0.15, 0.15,
+            .style(move |_iced_theme: &iced::Theme| container::Style {
+                background: Some(iced::Background::Color(iced::Color::from_rgba(
+                    0.0, 0.0, 0.0, 0.7,
                 ))),
-                border: iced::Border {
-                    color: iced::Color::from_rgb(0.5, 0.5, 0.5),
-                    width: 2.0,
-                    radius: 10.0.into(),
-                },
                 ..Default::default()
-            }),
-        )
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .center_x(Length::Fill)
-        .center_y(Length::Fill)
-        .style(|_theme: &iced::Theme| container::Style {
-            background: Some(iced::Background::Color(iced::Color::from_rgba(
-                0.0, 0.0, 0.0, 0.7,
-            ))),
-            ..Default::default()
-        });
-
-        iced::widget::stack![layout, dialog].into()
+            })
+        ]
+        .into()
     } else {
-        layout.into()
+        content.into()
     }
 }

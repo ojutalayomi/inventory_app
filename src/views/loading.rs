@@ -1,29 +1,34 @@
 use iced::widget::{column, container, text};
 use iced::{Element, Length};
 
-use crate::messages::Message;
+use crate::messages::{AppTheme, Message};
+use crate::theme;
+use crate::icons;
 
-pub fn view<'a>() -> Element<'a, Message> {
+pub fn view<'a>(app_theme: &'a AppTheme) -> Element<'a, Message> {
     container(
         column![
-            container(text("Inventory Manager").size(48))
-                .width(Length::Fill)
-                .center_x(Length::Fill),
-            container(text("Loading...").size(24))
-                .width(Length::Fill)
-                .center_x(Length::Fill),
+            icons::Icon::Box.view(icons::IconSize::XLarge, app_theme),
+            text("Inventory Manager")
+                .size(theme::TEXT_DISPLAY)
+                .style(move |_theme: &iced::Theme| text::Style {
+                    color: Some(theme::primary_color(app_theme)),
+                }),
+            text("Loading your workspace...")
+                .size(theme::TEXT_H3)
+                .style(move |_theme: &iced::Theme| text::Style {
+                    color: Some(theme::text_secondary_color(app_theme)),
+                }),
         ]
-        .spacing(20)
-        .padding(40),
+        .spacing(theme::SPACING_XL)
+        .align_x(iced::Alignment::Center),
     )
     .width(Length::Fill)
     .height(Length::Fill)
     .center_x(Length::Fill)
     .center_y(Length::Fill)
-    .style(|_theme: &iced::Theme| container::Style {
-        background: Some(iced::Background::Color(iced::Color::from_rgb(
-            0.1, 0.1, 0.15,
-        ))),
+    .style(move |_theme: &iced::Theme| container::Style {
+        background: Some(iced::Background::Color(theme::bg_color(app_theme))),
         ..Default::default()
     })
     .into()

@@ -1,7 +1,9 @@
 use iced::widget::{button, column, container, row, scrollable, text, text_input};
-use iced::{Element, Length};
+use iced::{Color, Element, Length};
 
-use crate::messages::{ItemDialogMode, Message};
+use crate::messages::{AppTheme, ItemDialogMode, Message};
+use crate::theme;
+use crate::icons;
 
 pub fn view<'a>(
     mode: &ItemDialogMode,
@@ -14,190 +16,315 @@ pub fn view<'a>(
     price: &'a str,
     validation_error: Option<&'a str>,
     similar_items: &'a [String],
+    app_theme: &'a AppTheme,
 ) -> Element<'a, Message> {
     let title = match mode {
-        ItemDialogMode::Add => "Add Inventory Item",
-        ItemDialogMode::Edit(_) => "Edit Inventory Item",
+        ItemDialogMode::Add => row![
+            icons::Icon::Add.view(icons::IconSize::Medium, app_theme),
+            text("Add Inventory Item").size(theme::TEXT_H1),
+        ]
+        .spacing(theme::SPACING_SM)
+        .align_y(iced::Alignment::Center),
+        ItemDialogMode::Edit(_) => row![
+            icons::Icon::Edit.view(icons::IconSize::Medium, app_theme),
+            text("Edit Inventory Item").size(theme::TEXT_H1),
+        ]
+        .spacing(theme::SPACING_SM)
+        .align_y(iced::Alignment::Center),
     };
 
-    let mut form = column![
-        text(title).size(28),
-        text("").size(8),
-    ];
+    // Helper function to create labeled input fields
+    let make_input = |label: &'a str, placeholder: &'a str, value: &'a str, on_input: fn(String) -> Message| {
+        column![
+            text(label)
+                .size(theme::TEXT_BODY)
+                .style(move |_theme: &iced::Theme| text::Style {
+                    color: Some(theme::text_color(app_theme)),
+                }),
+            text_input(placeholder, value)
+                .on_input(on_input)
+                .padding(theme::SPACING_LG)
+                .size(theme::TEXT_BODY)
+                .width(Length::Fill)
+                .style(move |theme_iced: &iced::Theme, status: text_input::Status| {
+                    let default_style = text_input::default(theme_iced, status);
+                    text_input::Style {
+                        background: iced::Background::Color(theme::surface_elevated_color(app_theme)),
+                        border: iced::Border {
+                            color: match status {
+                                text_input::Status::Focused => theme::primary_color(app_theme),
+                                _ => theme::border_color(app_theme),
+                            },
+                            width: if matches!(status, text_input::Status::Focused) { 2.0 } else { 1.0 },
+                            radius: theme::RADIUS_MD.into(),
+                        },
+                        icon: default_style.icon,
+                        placeholder: theme::text_tertiary_color(app_theme),
+                        value: theme::text_color(app_theme),
+                        selection: theme::primary_color(app_theme),
+                    }
+                }),
+        ]
+        .spacing(theme::SPACING_SM)
+    };
+
+    let mut form_content = column![
+        title,
+    ]
+    .spacing(theme::SPACING_LG);
 
     // Show validation error if present
     if let Some(error) = validation_error {
-        form = form.push(
+        form_content = form_content.push(
             container(
-                text(error)
-                    .size(14)
-                    .style(|_theme: &iced::Theme| {
-                        iced::widget::text::Style {
-                            color: Some(iced::Color::from_rgb(0.9, 0.3, 0.3)),
-                        }
-                    })
+                row![
+                    icons::Icon::AlertTriangle.view(icons::IconSize::Medium, app_theme),
+                    text(error).size(theme::TEXT_BODY)
+                ]
+                .spacing(theme::SPACING_MD)
+                .align_y(iced::Alignment::Center)
             )
-            .padding(10)
+            .padding(theme::SPACING_LG)
             .width(Length::Fill)
-            .style(|_theme: &iced::Theme| container::Style {
-                background: Some(iced::Background::Color(iced::Color::from_rgba(0.9, 0.3, 0.3, 0.2))),
+            .style(move |_theme: &iced::Theme| container::Style {
+                background: Some(iced::Background::Color(
+                    Color::from_rgba(
+                        theme::danger_color(app_theme).r,
+                        theme::danger_color(app_theme).g,
+                        theme::danger_color(app_theme).b,
+                        0.2,
+                    )
+                )),
                 border: iced::Border {
-                    color: iced::Color::from_rgb(0.9, 0.3, 0.3),
+                    color: theme::danger_color(app_theme),
                     width: 1.0,
-                    radius: 5.0.into(),
+                    radius: theme::RADIUS_MD.into(),
                 },
                 ..Default::default()
             })
         );
-        form = form.push(text("").size(8));
     }
 
     // Show similar items warning
     if !similar_items.is_empty() {
-        let mut warning_content = column![
-            text("⚠️ Similar items found:")
-                .size(14)
-                .style(|_theme: &iced::Theme| {
-                    iced::widget::text::Style {
-                        color: Some(iced::Color::from_rgb(0.9, 0.7, 0.3)),
-                    }
-                }),
+        let mut warning_col = column![
+            row![
+                icons::Icon::AlertTriangle.view(icons::IconSize::Medium, app_theme),
+                text("Similar items found:")
+                    .size(theme::TEXT_BODY)
+                    .style(move |_theme: &iced::Theme| text::Style {
+                        color: Some(theme::warning_color(app_theme)),
+                    }),
+            ]
+            .spacing(theme::SPACING_SM)
+            .align_y(iced::Alignment::Center),
         ]
-        .spacing(5);
+        .spacing(theme::SPACING_SM);
         
         for item in similar_items.iter().take(3) {
-            warning_content = warning_content.push(
+            warning_col = warning_col.push(
                 text(format!("  • {}", item))
-                    .size(12)
-                    .style(|_theme: &iced::Theme| {
-                        iced::widget::text::Style {
-                            color: Some(iced::Color::from_rgb(0.8, 0.8, 0.8)),
-                        }
+                    .size(theme::TEXT_CAPTION)
+                    .style(move |_theme: &iced::Theme| text::Style {
+                        color: Some(theme::text_secondary_color(app_theme)),
                     })
             );
         }
         
-        form = form.push(
-            container(warning_content)
-                .padding(10)
+        form_content = form_content.push(
+            container(warning_col)
+                .padding(theme::SPACING_LG)
                 .width(Length::Fill)
-                .style(|_theme: &iced::Theme| container::Style {
-                    background: Some(iced::Background::Color(iced::Color::from_rgba(0.9, 0.7, 0.3, 0.2))),
+                .style(move |_theme: &iced::Theme| container::Style {
+                    background: Some(iced::Background::Color(
+                        Color::from_rgba(
+                            theme::warning_color(app_theme).r,
+                            theme::warning_color(app_theme).g,
+                            theme::warning_color(app_theme).b,
+                            0.2,
+                        )
+                    )),
                     border: iced::Border {
-                        color: iced::Color::from_rgb(0.9, 0.7, 0.3),
+                        color: theme::warning_color(app_theme),
                         width: 1.0,
-                        radius: 5.0.into(),
+                        radius: theme::RADIUS_MD.into(),
                     },
                     ..Default::default()
                 })
         );
-        form = form.push(text("").size(8));
     }
 
-    form = form.push(column![
-        text("Item Name:").size(14),
-        text_input("Enter item name", name)
-            .on_input(Message::NameChanged)
-            .padding(10),
-        text("SKU:").size(14),
-        text_input("Enter SKU", sku)
-            .on_input(Message::SkuChanged)
-            .padding(10),
-        text("Category:").size(14),
-        text_input("Enter category (e.g., Electronics, Food)", category)
-            .on_input(Message::CategoryChanged)
-            .padding(10),
-        text("Supplier:").size(14),
-        text_input("Enter supplier name", supplier)
-            .on_input(Message::SupplierChanged)
-            .padding(10),
-        text("Description:").size(14),
-        text_input("Enter item description", description)
-            .on_input(Message::DescriptionChanged)
-            .padding(10),
-        text("Quantity:").size(14),
-        text_input("Enter quantity", quantity)
-            .on_input(Message::QuantityChanged)
-            .padding(10),
-        text("Price ($):").size(14),
-        text_input("Enter price", price)
-            .on_input(Message::PriceChanged)
-            .padding(10),
-        text("").size(8),
-        row![
-            button("Submit")
-                .on_press(Message::SubmitItem)
-                .padding(10)
-                .style(
-                    |_theme: &iced::Theme, _status: iced::widget::button::Status| {
-                        iced::widget::button::Style {
-                            background: Some(iced::Background::Color(iced::Color::from_rgb(
-                                0.2, 0.5, 0.3,
-                            ))),
-                            border: iced::Border {
-                                color: iced::Color::from_rgb(0.3, 0.6, 0.4),
-                                width: 1.0,
-                                radius: 5.0.into(),
-                            },
-                            text_color: iced::Color::WHITE,
-                            ..Default::default()
-                        }
-                    }
-                ),
-            button("Cancel")
-                .on_press(Message::CloseItemDialog)
-                .padding(10)
-                .style(
-                    |_theme: &iced::Theme, _status: iced::widget::button::Status| {
-                        iced::widget::button::Style {
-                            background: Some(iced::Background::Color(iced::Color::from_rgb(
-                                0.3, 0.3, 0.3,
-                            ))),
-                            border: iced::Border {
-                                color: iced::Color::from_rgb(0.4, 0.4, 0.4),
-                                width: 1.0,
-                                radius: 5.0.into(),
-                            },
-                            text_color: iced::Color::WHITE,
-                            ..Default::default()
-                        }
-                    }
-                ),
-        ]
-        .spacing(10),
-    ])
-    .spacing(8)
-    .padding(30);
+    // Two-column form layout
+    let left_column = column![
+        make_input("Item Name *", "Enter item name", name, Message::NameChanged),
+        make_input("SKU *", "Enter SKU", sku, Message::SkuChanged),
+        make_input("Category *", "e.g., Electronics, Food", category, Message::CategoryChanged),
+        make_input("Supplier", "Enter supplier name", supplier, Message::SupplierChanged),
+    ]
+    .spacing(theme::SPACING_LG)
+    .width(Length::Fill);
 
+    let right_column = column![
+        make_input("Quantity *", "Enter quantity", quantity, Message::QuantityChanged),
+        make_input("Price ($) *", "Enter price", price, Message::PriceChanged),
+        column![
+            text("Description")
+                .size(theme::TEXT_BODY)
+                .style(move |_theme: &iced::Theme| text::Style {
+                    color: Some(theme::text_color(app_theme)),
+                }),
+            text_input("Enter item description (optional)", description)
+                .on_input(Message::DescriptionChanged)
+                .padding(theme::SPACING_LG)
+                .size(theme::TEXT_BODY)
+                .width(Length::Fill)
+                .style(move |theme_iced: &iced::Theme, status: text_input::Status| {
+                    let default_style = text_input::default(theme_iced, status);
+                    text_input::Style {
+                        background: iced::Background::Color(theme::surface_elevated_color(app_theme)),
+                        border: iced::Border {
+                            color: match status {
+                                text_input::Status::Focused => theme::primary_color(app_theme),
+                                _ => theme::border_color(app_theme),
+                            },
+                            width: if matches!(status, text_input::Status::Focused) { 2.0 } else { 1.0 },
+                            radius: theme::RADIUS_MD.into(),
+                        },
+                        icon: default_style.icon,
+                        placeholder: theme::text_tertiary_color(app_theme),
+                        value: theme::text_color(app_theme),
+                        selection: theme::primary_color(app_theme),
+                    }
+                }),
+        ]
+        .spacing(theme::SPACING_SM),
+    ]
+    .spacing(theme::SPACING_LG)
+    .width(Length::Fill);
+
+    let two_col_row = row![left_column, right_column]
+        .spacing(theme::SPACING_2XL);
+
+    form_content = form_content.push(two_col_row);
+
+    // Action buttons
+    let submit_btn = button(
+        row![
+            icons::Icon::Check.view(icons::IconSize::Small, app_theme),
+            text(match mode {
+                ItemDialogMode::Add => "Add Item",
+                ItemDialogMode::Edit(_) => "Save Changes",
+            })
+            .size(theme::TEXT_BODY_LARGE),
+        ]
+        .spacing(theme::SPACING_SM)
+        .align_y(iced::Alignment::Center)
+    )
+    .on_press(Message::SubmitItem)
+    .padding([theme::SPACING_MD, theme::SPACING_2XL])
+    .style(move |_theme: &iced::Theme, status: button::Status| {
+        let bg_color = match status {
+            button::Status::Hovered => Color::from_rgba(
+                theme::success_color(app_theme).r,
+                theme::success_color(app_theme).g,
+                theme::success_color(app_theme).b,
+                0.9,
+            ),
+            _ => theme::success_color(app_theme),
+        };
+        
+        button::Style {
+            background: Some(iced::Background::Color(bg_color)),
+            text_color: Color::WHITE,
+            border: iced::Border {
+                radius: theme::RADIUS_MD.into(),
+                ..Default::default()
+            },
+            shadow: iced::Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.2),
+                offset: iced::Vector::new(0.0, 2.0),
+                blur_radius: 6.0,
+            },
+            ..Default::default()
+        }
+    });
+
+    let cancel_btn = button(
+        text("✕ Cancel")
+            .size(theme::TEXT_BODY_LARGE)
+    )
+    .on_press(Message::CloseItemDialog)
+    .padding([theme::SPACING_MD, theme::SPACING_2XL])
+    .style(move |_theme: &iced::Theme, status: button::Status| {
+        let bg_color = match status {
+            button::Status::Hovered => theme::surface_elevated_color(app_theme),
+            _ => theme::surface_color(app_theme),
+        };
+        
+        button::Style {
+            background: Some(iced::Background::Color(bg_color)),
+            text_color: theme::text_color(app_theme),
+            border: iced::Border {
+                color: theme::border_color(app_theme),
+                width: 1.0,
+                radius: theme::RADIUS_MD.into(),
+            },
+            ..Default::default()
+        }
+    });
+
+    form_content = form_content.push(
+        row![
+            cancel_btn,
+            iced::widget::horizontal_space(),
+            submit_btn,
+        ]
+        .spacing(theme::SPACING_LG)
+        .align_y(iced::Alignment::Center)
+    );
+
+    form_content = form_content.push(
+        container(
+            text("* Required fields")
+                .size(theme::TEXT_CAPTION)
+                .style(move |_theme: &iced::Theme| text::Style {
+                    color: Some(theme::text_tertiary_color(app_theme)),
+                })
+        )
+        .width(Length::Fill)
+        .center_x(Length::Fill)
+    );
+
+    // Modal dialog
     container(
         container(
-            container(scrollable(form).height(500).width(Length::Fill))
-                .max_width(600)
-                .max_height(600)
-                .padding(20)
-                .style(|_theme: &iced::Theme| container::Style {
-                    background: Some(iced::Background::Color(iced::Color::from_rgb(
-                        0.15, 0.15, 0.15,
-                    ))),
-                    border: iced::Border {
-                        color: iced::Color::from_rgb(0.5, 0.5, 0.5),
-                        width: 2.0,
-                        radius: 10.0.into(),
-                    },
-                    ..Default::default()
-                }),
+            scrollable(form_content)
+                .width(Length::Fill)
+                .height(Length::Fixed(650.0))
         )
-        .center_x(Length::Fill)
-        .center_y(Length::Fill),
+        .padding(theme::SPACING_3XL)
+        .max_width(900)
+        .style(move |_theme: &iced::Theme| container::Style {
+            background: Some(iced::Background::Color(theme::surface_color(app_theme))),
+            border: iced::Border {
+                color: theme::primary_color(app_theme),
+                width: 2.0,
+                radius: theme::RADIUS_LG.into(),
+            },
+            shadow: iced::Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.4),
+                offset: iced::Vector::new(0.0, 12.0),
+                blur_radius: 48.0,
+            },
+            ..Default::default()
+        })
     )
     .width(Length::Fill)
     .height(Length::Fill)
     .center_x(Length::Fill)
     .center_y(Length::Fill)
-    .style(|_theme: &iced::Theme| container::Style {
-        background: Some(iced::Background::Color(iced::Color::from_rgba(
-            0.0, 0.0, 0.0, 0.7,
-        ))),
+    .style(move |_theme: &iced::Theme| container::Style {
+        background: Some(iced::Background::Color(Color::from_rgba(0.0, 0.0, 0.0, 0.7))),
         ..Default::default()
     })
     .into()

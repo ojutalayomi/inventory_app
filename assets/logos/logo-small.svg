@@ -1,0 +1,12 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="smallLogoTitle">
+    <title id="smallLogoTitle">Inventory Compact Logo</title>
+    <g id="logo-symbol">
+        <path fill="#1A3A5C" d="M32 4L4 18V46L32 60L60 46V18L32 4Z" opacity="0.1"/>
+        <path fill="#1A3A5C" d="M32 60L4 46V18L32 32V60Z"/>
+        <path fill="#244D7A" d="M60 18L32 32V60L60 46V18Z"/>
+        <path fill="#2F629A" d="M32 4L60 18L32 32L4 18L32 4Z"/>
+        
+        <path fill="#2EBFA5" d="M32 18L19 25.5L22.5 31L32 25.5L41.5 31L45 25.5L32 18Z"/>
+        <path fill="#2EBFA5" d="M32 28L22 34V42L32 48L42 42V34L32 28Z"/>
+    </g>
+</svg>

@@ -1,20 +1,24 @@
 use iced::{Element, Length};
 use iced::widget::{button, checkbox, column, container, row, scrollable, text, text_input};
 
-use crate::messages::{AppSettings, AppTheme, Message};
+use crate::messages::{AppSettings, AppTheme, LayoutStyle, Message};
+use crate::theme;
+use crate::icons;
 
 pub fn view<'a>(
     settings: &'a AppSettings,
     interval_input: &'a str,
     category_input: &'a str,
     latest_version: Option<&'a crate::update_checker::UpdateInfo>,
+    import_error: Option<&'a str>,
+    theme: &'a crate::messages::AppTheme,
 ) -> Element<'a, Message> {
     let title = text("Settings").size(32);
 
     let auto_save_section = column![
-        text("Auto-Save").size(20).style(|_theme: &iced::Theme| {
+        text("Auto-Save").size(20).style(move |_iced_theme: &iced::Theme| {
             iced::widget::text::Style {
-                color: Some(iced::Color::from_rgb(0.7, 0.8, 0.9)),
+                color: Some(crate::theme::text_color(theme)),
             }
         }),
         checkbox("Enable auto-save", settings.auto_save_enabled)
@@ -30,9 +34,9 @@ pub fn view<'a>(
         .align_y(iced::Alignment::Center),
         text("Note: Changes are saved automatically when auto-save is enabled")
             .size(12)
-            .style(|_theme: &iced::Theme| {
+            .style(move |_iced_theme: &iced::Theme| {
                 iced::widget::text::Style {
-                    color: Some(iced::Color::from_rgb(0.5, 0.5, 0.5)),
+                    color: Some(crate::theme::text_secondary_color(theme)),
                 }
             }),
     ]
@@ -40,9 +44,9 @@ pub fn view<'a>(
     .padding(20);
 
     let inventory_section = column![
-        text("Inventory").size(20).style(|_theme: &iced::Theme| {
+        text("Inventory").size(20).style(move |_iced_theme: &iced::Theme| {
             iced::widget::text::Style {
-                color: Some(iced::Color::from_rgb(0.7, 0.8, 0.9)),
+                color: Some(crate::theme::text_color(theme)),
             }
         }),
         row![
@@ -56,9 +60,9 @@ pub fn view<'a>(
         .align_y(iced::Alignment::Center),
         text("This category will be pre-filled when adding new items")
             .size(12)
-            .style(|_theme: &iced::Theme| {
+            .style(move |_iced_theme: &iced::Theme| {
                 iced::widget::text::Style {
-                    color: Some(iced::Color::from_rgb(0.5, 0.5, 0.5)),
+                    color: Some(crate::theme::text_secondary_color(theme)),
                 }
             }),
     ]
@@ -66,9 +70,9 @@ pub fn view<'a>(
     .padding(20);
 
     let appearance_section = column![
-        text("Appearance").size(20).style(|_theme: &iced::Theme| {
+        text("Appearance").size(20).style(move |_iced_theme: &iced::Theme| {
             iced::widget::text::Style {
-                color: Some(iced::Color::from_rgb(0.7, 0.8, 0.9)),
+                color: Some(crate::theme::text_color(theme)),
             }
         }),
         row![
@@ -81,18 +85,18 @@ pub fn view<'a>(
             .on_press(Message::ThemeChanged(AppTheme::Dark))
             .padding(8)
             .style(
-                |_theme: &iced::Theme, _status: iced::widget::button::Status| {
+                move |_theme: &iced::Theme, _status: iced::widget::button::Status| {
                     iced::widget::button::Style {
                         background: if settings.theme == AppTheme::Dark {
-                            Some(iced::Background::Color(iced::Color::from_rgb(
-                                0.2, 0.4, 0.6,
-                            )))
+                            Some(iced::Background::Color(crate::theme::primary_color(theme)))
                         } else {
-                            Some(iced::Background::Color(iced::Color::from_rgb(
-                                0.25, 0.25, 0.25,
-                            )))
+                            Some(iced::Background::Color(crate::theme::surface_elevated_color(theme)))
                         },
-                        text_color: iced::Color::WHITE,
+                        text_color: if settings.theme == AppTheme::Dark {
+                            iced::Color::WHITE
+                        } else {
+                            crate::theme::text_color(theme)
+                        },
                         border: iced::Border {
                             radius: 5.0.into(),
                             ..Default::default()
@@ -109,18 +113,18 @@ pub fn view<'a>(
             .on_press(Message::ThemeChanged(AppTheme::Light))
             .padding(8)
             .style(
-                |_theme: &iced::Theme, _status: iced::widget::button::Status| {
+                move |_theme: &iced::Theme, _status: iced::widget::button::Status| {
                     iced::widget::button::Style {
                         background: if settings.theme == AppTheme::Light {
-                            Some(iced::Background::Color(iced::Color::from_rgb(
-                                0.2, 0.4, 0.6,
-                            )))
+                            Some(iced::Background::Color(crate::theme::primary_color(theme)))
                         } else {
-                            Some(iced::Background::Color(iced::Color::from_rgb(
-                                0.25, 0.25, 0.25,
-                            )))
+                            Some(iced::Background::Color(crate::theme::surface_elevated_color(theme)))
                         },
-                        text_color: iced::Color::WHITE,
+                        text_color: if settings.theme == AppTheme::Light {
+                            iced::Color::WHITE
+                        } else {
+                            crate::theme::text_color(theme)
+                        },
                         border: iced::Border {
                             radius: 5.0.into(),
                             ..Default::default()
@@ -132,6 +136,75 @@ pub fn view<'a>(
         ]
         .spacing(10)
         .align_y(iced::Alignment::Center),
+        text("").size(8), // Spacer
+        row![
+            text("Layout:").size(14),
+            button(if settings.layout_style == LayoutStyle::Header {
+                "Header (Current)"
+            } else {
+                "Header"
+            })
+            .on_press(Message::LayoutStyleChanged(LayoutStyle::Header))
+            .padding(8)
+            .style(
+                move |_theme: &iced::Theme, _status: iced::widget::button::Status| {
+                    iced::widget::button::Style {
+                        background: if settings.layout_style == LayoutStyle::Header {
+                            Some(iced::Background::Color(crate::theme::primary_color(theme)))
+                        } else {
+                            Some(iced::Background::Color(crate::theme::surface_elevated_color(theme)))
+                        },
+                        text_color: if settings.layout_style == LayoutStyle::Header {
+                            iced::Color::WHITE
+                        } else {
+                            crate::theme::text_color(theme)
+                        },
+                        border: iced::Border {
+                            radius: 5.0.into(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }
+                }
+            ),
+            button(if settings.layout_style == LayoutStyle::Sidebar {
+                "Sidebar (Current)"
+            } else {
+                "Sidebar"
+            })
+            .on_press(Message::LayoutStyleChanged(LayoutStyle::Sidebar))
+            .padding(8)
+            .style(
+                move |_theme: &iced::Theme, _status: iced::widget::button::Status| {
+                    iced::widget::button::Style {
+                        background: if settings.layout_style == LayoutStyle::Sidebar {
+                            Some(iced::Background::Color(crate::theme::primary_color(theme)))
+                        } else {
+                            Some(iced::Background::Color(crate::theme::surface_elevated_color(theme)))
+                        },
+                        text_color: if settings.layout_style == LayoutStyle::Sidebar {
+                            iced::Color::WHITE
+                        } else {
+                            crate::theme::text_color(theme)
+                        },
+                        border: iced::Border {
+                            radius: 5.0.into(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }
+                }
+            ),
+        ]
+        .spacing(10)
+        .align_y(iced::Alignment::Center),
+        text("Layout changes apply immediately")
+            .size(12)
+            .style(move |_iced_theme: &iced::Theme| {
+                iced::widget::text::Style {
+                    color: Some(crate::theme::text_secondary_color(theme)),
+                }
+            }),
         checkbox(
             "Show loading screen on startup",
             settings.show_loading_screen
@@ -139,9 +212,9 @@ pub fn view<'a>(
         .on_toggle(|_| Message::ToggleLoadingScreen),
         text("Theme changes apply immediately")
             .size(12)
-            .style(|_theme: &iced::Theme| {
+            .style(move |_iced_theme: &iced::Theme| {
                 iced::widget::text::Style {
-                    color: Some(iced::Color::from_rgb(0.5, 0.5, 0.5)),
+                    color: Some(crate::theme::text_secondary_color(theme)),
                 }
             }),
     ]
@@ -151,9 +224,9 @@ pub fn view<'a>(
     let data_section = column![
         text("Data Management")
             .size(20)
-            .style(|_theme: &iced::Theme| {
+            .style(move |_iced_theme: &iced::Theme| {
                 iced::widget::text::Style {
-                    color: Some(iced::Color::from_rgb(0.7, 0.8, 0.9)),
+                    color: Some(crate::theme::text_color(theme)),
                 }
             }),
         row![
@@ -161,11 +234,9 @@ pub fn view<'a>(
                 .on_press(Message::ExportData)
                 .padding(10)
                 .style(
-                    |_theme: &iced::Theme, _status: iced::widget::button::Status| {
+                    move |_theme: &iced::Theme, _status: iced::widget::button::Status| {
                         iced::widget::button::Style {
-                            background: Some(iced::Background::Color(iced::Color::from_rgb(
-                                0.2, 0.5, 0.3,
-                            ))),
+                            background: Some(iced::Background::Color(crate::theme::success_color(theme))),
                             text_color: iced::Color::WHITE,
                             border: iced::Border {
                                 radius: 5.0.into(),
@@ -176,14 +247,12 @@ pub fn view<'a>(
                     }
                 ),
             button("Import Data")
-                .on_press(Message::ImportData)
+                .on_press(Message::OpenImportFilePicker)
                 .padding(10)
                 .style(
-                    |_theme: &iced::Theme, _status: iced::widget::button::Status| {
+                    move |_theme: &iced::Theme, _status: iced::widget::button::Status| {
                         iced::widget::button::Style {
-                            background: Some(iced::Background::Color(iced::Color::from_rgb(
-                                0.4, 0.4, 0.6,
-                            ))),
+                            background: Some(iced::Background::Color(crate::theme::primary_color(theme))),
                             text_color: iced::Color::WHITE,
                             border: iced::Border {
                                 radius: 5.0.into(),
@@ -197,18 +266,29 @@ pub fn view<'a>(
         .spacing(10),
         text("Export saves data to Desktop as JSON file")
             .size(12)
-            .style(|_theme: &iced::Theme| {
+            .style(move |_iced_theme: &iced::Theme| {
                 iced::widget::text::Style {
-                    color: Some(iced::Color::from_rgb(0.5, 0.5, 0.5)),
+                    color: Some(crate::theme::text_secondary_color(theme)),
                 }
             }),
-        text("Import reads from ~/Downloads/inventory_import.json")
+        text("Import opens a file picker to select a JSON file")
             .size(12)
-            .style(|_theme: &iced::Theme| {
+            .style(move |_iced_theme: &iced::Theme| {
                 iced::widget::text::Style {
-                    color: Some(iced::Color::from_rgb(0.5, 0.5, 0.5)),
+                    color: Some(crate::theme::text_secondary_color(theme)),
                 }
             }),
+        if let Some(error) = import_error {
+            text(format!("Import error: {}", error))
+                .size(12)
+                .style(move |_iced_theme: &iced::Theme| {
+                    iced::widget::text::Style {
+                        color: Some(crate::theme::danger_color(theme)),
+                    }
+                })
+        } else {
+            text("").size(1)
+        },
         text("").size(10),
         button("Clear All Data")
             .on_press(Message::ClearAllData)
@@ -230,9 +310,9 @@ pub fn view<'a>(
             ),
         text("Caution: You will be asked to confirm before deletion")
             .size(12)
-            .style(|_theme: &iced::Theme| {
+            .style(move |_iced_theme: &iced::Theme| {
                 iced::widget::text::Style {
-                    color: Some(iced::Color::from_rgb(0.8, 0.6, 0.3)),
+                    color: Some(crate::theme::warning_color(theme)),
                 }
             }),
     ]
@@ -242,7 +322,7 @@ pub fn view<'a>(
     let current_version = env!("CARGO_PKG_VERSION");
     
     let update_section = column![
-        text("Updates").size(20).style(|_theme: &iced::Theme| {
+        text("Updates").size(20).style(move |_iced_theme: &iced::Theme| {
             iced::widget::text::Style {
                 color: Some(iced::Color::from_rgb(0.7, 0.8, 0.9)),
             }
@@ -251,7 +331,14 @@ pub fn view<'a>(
             text(format!("Current Version: v{}", current_version)).size(14),
             match latest_version {
                 Some(update) => {
-                    button(text(format!("🔔 Update Available: {}", update.version)))
+                    button(
+                        row![
+                            icons::Icon::Alerts.view(icons::IconSize::Small, theme),
+                            text(format!("Update Available: {}", update.version)),
+                        ]
+                        .spacing(theme::SPACING_SM)
+                        .align_y(iced::Alignment::Center)
+                    )
                         .on_press(Message::DownloadUpdate(update.download_url.clone()))
                         .padding(8)
                         .style(
@@ -281,9 +368,9 @@ pub fn view<'a>(
         .align_y(iced::Alignment::Center),
         text("Checks GitHub for new releases")
             .size(12)
-            .style(|_theme: &iced::Theme| {
+            .style(move |_iced_theme: &iced::Theme| {
                 iced::widget::text::Style {
-                    color: Some(iced::Color::from_rgb(0.5, 0.5, 0.5)),
+                    color: Some(crate::theme::text_secondary_color(theme)),
                 }
             }),
     ]
@@ -291,7 +378,7 @@ pub fn view<'a>(
     .padding(20);
 
     let info_section = column![
-        text("About").size(20).style(|_theme: &iced::Theme| {
+        text("About").size(20).style(move |_iced_theme: &iced::Theme| {
             iced::widget::text::Style {
                 color: Some(iced::Color::from_rgb(0.7, 0.8, 0.9)),
             }
@@ -301,9 +388,9 @@ pub fn view<'a>(
         text("").size(8),
         text("Data Location:")
             .size(12)
-            .style(|_theme: &iced::Theme| {
+            .style(move |_iced_theme: &iced::Theme| {
                 iced::widget::text::Style {
-                    color: Some(iced::Color::from_rgb(0.6, 0.6, 0.6)),
+                    color: Some(crate::theme::text_secondary_color(theme)),
                 }
             }),
         text(format!(
@@ -311,9 +398,9 @@ pub fn view<'a>(
             crate::persistence::data_file_path().display()
         ))
         .size(11)
-        .style(|_theme: &iced::Theme| {
+        .style(move |_iced_theme: &iced::Theme| {
             iced::widget::text::Style {
-                color: Some(iced::Color::from_rgb(0.5, 0.5, 0.5)),
+                color: Some(crate::theme::text_secondary_color(theme)),
             }
         }),
     ]
@@ -323,78 +410,66 @@ pub fn view<'a>(
     let content: Element<'a, Message> = scrollable(
         column![
             title,
-            container(auto_save_section).style(|_theme: &iced::Theme| {
+            container(auto_save_section).style(move |_iced_theme: &iced::Theme| {
                 container::Style {
-                    background: Some(iced::Background::Color(iced::Color::from_rgb(
-                        0.12, 0.12, 0.12,
-                    ))),
+                    background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
                     border: iced::Border {
-                        color: iced::Color::from_rgb(0.2, 0.2, 0.2),
+                        color: crate::theme::border_color(theme),
                         width: 1.0,
                         radius: 5.0.into(),
                     },
                     ..Default::default()
                 }
             }),
-            container(inventory_section).style(|_theme: &iced::Theme| {
+            container(inventory_section).style(move |_iced_theme: &iced::Theme| {
                 container::Style {
-                    background: Some(iced::Background::Color(iced::Color::from_rgb(
-                        0.12, 0.12, 0.12,
-                    ))),
+                    background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
                     border: iced::Border {
-                        color: iced::Color::from_rgb(0.2, 0.2, 0.2),
+                        color: crate::theme::border_color(theme),
                         width: 1.0,
                         radius: 5.0.into(),
                     },
                     ..Default::default()
                 }
             }),
-            container(appearance_section).style(|_theme: &iced::Theme| {
+            container(appearance_section).style(move |_iced_theme: &iced::Theme| {
                 container::Style {
-                    background: Some(iced::Background::Color(iced::Color::from_rgb(
-                        0.12, 0.12, 0.12,
-                    ))),
+                    background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
                     border: iced::Border {
-                        color: iced::Color::from_rgb(0.2, 0.2, 0.2),
+                        color: crate::theme::border_color(theme),
                         width: 1.0,
                         radius: 5.0.into(),
                     },
                     ..Default::default()
                 }
             }),
-            container(data_section).style(|_theme: &iced::Theme| {
+            container(data_section).style(move |_iced_theme: &iced::Theme| {
                 container::Style {
-                    background: Some(iced::Background::Color(iced::Color::from_rgb(
-                        0.12, 0.12, 0.12,
-                    ))),
+                    background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
                     border: iced::Border {
-                        color: iced::Color::from_rgb(0.2, 0.2, 0.2),
+                        color: crate::theme::border_color(theme),
                         width: 1.0,
                         radius: 5.0.into(),
                     },
                     ..Default::default()
                 }
             }),
-            container(update_section).style(|_theme: &iced::Theme| {
+            container(update_section).style(move |_iced_theme: &iced::Theme| {
                 container::Style {
-                    background: Some(iced::Background::Color(iced::Color::from_rgb(
-                        0.12, 0.12, 0.12,
-                    ))),
+                    background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
                     border: iced::Border {
-                        color: iced::Color::from_rgb(0.2, 0.2, 0.2),
+                        color: crate::theme::border_color(theme),
                         width: 1.0,
                         radius: 5.0.into(),
                     },
                     ..Default::default()
                 }
             }),
-            container(info_section).style(|_theme: &iced::Theme| {
+            container(info_section).style(move |_iced_theme: &iced::Theme| {
                 container::Style {
-                    background: Some(iced::Background::Color(iced::Color::from_rgb(
-                        0.12, 0.12, 0.12,
-                    ))),
+                    background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
                     border: iced::Border {
-                        color: iced::Color::from_rgb(0.2, 0.2, 0.2),
+                        color: crate::theme::border_color(theme),
                         width: 1.0,
                         radius: 5.0.into(),
                     },

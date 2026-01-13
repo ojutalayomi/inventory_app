@@ -91,8 +91,12 @@ pub enum Message {
     DefaultCategoryChanged(String),
     ThemeChanged(AppTheme),
     ToggleLoadingScreen,
+    LayoutStyleChanged(LayoutStyle),
+    ToggleSidebar,
     ExportData,
     ImportData,
+    OpenImportFilePicker,
+    ImportFileSelected(Option<std::path::PathBuf>),
     ClearAllData,
     ConfirmClearAllData,
     CancelClearAllData,
@@ -114,6 +118,43 @@ pub enum Message {
 pub enum AppTheme {
     Dark,
     Light,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LayoutStyle {
+    Header,
+    Sidebar,
+}
+
+impl Default for LayoutStyle {
+    fn default() -> Self {
+        LayoutStyle::Header
+    }
+}
+
+impl serde::Serialize for LayoutStyle {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(match self {
+            LayoutStyle::Header => "header",
+            LayoutStyle::Sidebar => "sidebar",
+        })
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for LayoutStyle {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(match s.as_str() {
+            "sidebar" => LayoutStyle::Sidebar,
+            _ => LayoutStyle::Header,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -149,6 +190,8 @@ pub struct AppSettings {
     pub default_category: String,
     pub theme: AppTheme,
     pub show_loading_screen: bool,
+    #[serde(default)]
+    pub layout_style: LayoutStyle,
 }
 
 impl Default for AppSettings {
@@ -159,6 +202,7 @@ impl Default for AppSettings {
             default_category: String::from("General"),
             theme: AppTheme::Dark,
             show_loading_screen: true,
+            layout_style: LayoutStyle::default(),
         }
     }
 }
