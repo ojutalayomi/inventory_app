@@ -330,7 +330,7 @@ impl InventoryApp {
         let logout_btn = make_logout_btn();
         
         // Top bar (for sidebar layout) - always visible with user info
-        let top_bar = {
+        let _top_bar = {
             let user_pill_top = make_user_pill();
             let logout_btn_top = make_logout_btn();
             container(
@@ -654,7 +654,10 @@ impl InventoryApp {
                 &self.settings_category_input,
                 self.latest_version.as_ref(),
                 self.import_error.as_deref(),
-                theme,
+                self.checking_for_updates,
+                self.downloading_update,
+                self.update_message.as_deref(),
+                &self.settings.theme,
             ),
             View::UserManagement => {
                 let users: Vec<_> = self.auth_store.get_all_users();
@@ -721,47 +724,7 @@ impl InventoryApp {
             }
         };
 
-        if self.calculator.visible {
-            let calculator = crate::views::calculator::view(&self.calculator.display, theme);
-
-            let positioned_calc = container(calculator)
-                .width(350)
-                .padding(theme::SPACING_XL)
-                .style(move |_theme: &iced::Theme| container::Style {
-                    background: Some(iced::Background::Color(
-                        Color::from_rgba(
-                            theme::surface_color(theme).r,
-                            theme::surface_color(theme).g,
-                            theme::surface_color(theme).b,
-                            0.95,
-                        )
-                    )),
-                    border: iced::Border {
-                        color: theme::primary_color(theme),
-                        width: 2.0,
-                        radius: theme::RADIUS_LG.into(),
-                    },
-                    shadow: iced::Shadow {
-                        color: Color::from_rgba(0.0, 0.0, 0.0, 0.3),
-                        offset: iced::Vector::new(0.0, 8.0),
-                        blur_radius: 24.0,
-                    },
-                    ..Default::default()
-                });
-
-            // Stack calculator on top of main view
-            container(iced::widget::stack![
-                main_view,
-                container(positioned_calc)
-                    .center_x(Length::Fill)
-                    .center_y(Length::Fill),
-            ])
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
-        } else {
-            main_view
-        }
+        main_view
     }
 }
 

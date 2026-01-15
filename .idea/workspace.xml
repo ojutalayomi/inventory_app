@@ -12,22 +12,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a23c3cb6-cefe-47cd-9db5-096946a518bf" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/handlers/calculator.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/handlers/calculator.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/icons.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/icons.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/about.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/about.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/alerts.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/alerts.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/audit_log.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/audit_log.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/calculator.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/calculator.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/editor.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/editor.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/inventory.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/inventory.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/item_dialog.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/item_dialog.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/loading.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/loading.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/login.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/login.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/settings.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/settings.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/user_management.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/user_management.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/main_view.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/main_view.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -41,9 +31,9 @@
   <component name="MacroExpansionManager">
     <option name="directoryName" value="V9udOMKA" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 7
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7
+}</component>
   <component name="ProjectId" id="38CpLZkDBdVJkRdvnx8zxbZT0R3" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -54,10 +44,13 @@
     "Cargo.Run inventory_app.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.rust.reset.selective.auto.import": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
     "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -65,6 +58,7 @@
     "nodejs_package_manager_path": "npm",
     "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
     "org.rust.first.attach.projects": "true",
+    "to.speed.mode.migration.done": "true",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -116,6 +110,7 @@
       <option name="presentableId" value="Default" />
       <updated>1768313352701</updated>
       <workItem from="1768313355104" duration="997000" />
+      <workItem from="1768468730396" duration="1606000" />
     </task>
     <servers />
   </component>

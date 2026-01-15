@@ -187,6 +187,7 @@ pub fn view<'a>(display: &'a str, app_theme: &'a AppTheme) -> Element<'a, Messag
         text("").size(theme::SPACING_SM),
         clear_button,
     ]
+    .padding(theme::SPACING_MD)
     .spacing(theme::SPACING_MD)
     .into()
 }

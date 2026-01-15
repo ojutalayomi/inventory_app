@@ -24,6 +24,7 @@ winres = "0.1"
 product-name = "Inventory Manager"
 identifier = "com.ojutalayomi.inventory-app"
 icons = ["assets/icon.png"]
+resources = ["assets/"]
 before-packaging-command = "cargo build --release"
 out-dir = "dist"
 

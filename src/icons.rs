@@ -5,6 +5,36 @@ use std::path::PathBuf;
 use crate::messages::{AppTheme, Message};
 use crate::theme;
 
+fn assets_dir() -> PathBuf {
+    let mut candidates = Vec::new();
+
+    if let Ok(cwd) = std::env::current_dir() {
+        candidates.push(cwd.join("assets"));
+    }
+
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            candidates.push(exe_dir.join("assets"));
+            candidates.push(
+                exe_dir
+                    .join("..")
+                    .join("Resources")
+                    .join("assets"),
+            );
+            candidates.push(exe_dir.join("..").join("assets"));
+            candidates.push(exe_dir.join("..").join("..").join("assets"));
+        }
+    }
+
+    for candidate in candidates {
+        if candidate.exists() {
+            return candidate;
+        }
+    }
+
+    PathBuf::from("assets")
+}
+
 /// Icon size presets
 #[derive(Debug, Clone, Copy)]
 pub enum IconSize {
@@ -68,7 +98,7 @@ pub enum Icon {
 impl Icon {
     /// Get the file path for this icon
     fn path(&self) -> PathBuf {
-        let base = PathBuf::from("assets/icons");
+        let base = assets_dir().join("icons");
         match self {
             // Navigation icons (actually in actions/ folder)
             Icon::Inventory => base.join("actions/inventory.svg"),
@@ -258,7 +288,7 @@ pub enum Illustration {
 
 impl Illustration {
     fn path(&self) -> PathBuf {
-        let base = PathBuf::from("assets/illustrations");
+        let base = assets_dir().join("illustrations");
         match self {
             Illustration::EmptyInventory => base.join("empty-inventory.svg"),
             Illustration::NoResults => base.join("no-results.svg"),
@@ -337,7 +367,7 @@ pub enum Logo {
 
 impl Logo {
     fn path(&self) -> PathBuf {
-        let base = PathBuf::from("assets/logos");
+        let base = assets_dir().join("logos");
         match self {
             Logo::AppIcon => base.join("app-icon.svg"),
             Logo::Full => base.join("logo.svg"),

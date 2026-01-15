@@ -106,6 +106,7 @@ pub enum Message {
     UpdateCheckComplete(Result<Option<crate::update_checker::UpdateInfo>, String>),
     DownloadUpdate(String), // download_url
     InstallUpdate(std::path::PathBuf),
+    UpdateDownloadFailed(String),
     CloseUpdateNotification,
 
     // App actions
@@ -181,6 +182,14 @@ pub struct SavedState {
     pub audit_log: crate::audit::AuditLog,
     #[serde(default)]
     pub alert_manager: crate::alerts::AlertManager,
+    #[serde(default)]
+    pub sidebar_collapsed: bool,
+    #[serde(default)]
+    pub show_alerts_panel: bool,
+    #[serde(default)]
+    pub show_search_panel: bool,
+    #[serde(default)]
+    pub current_view: View,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -248,4 +257,43 @@ pub enum View {
     UserManagement,
     AuditLog,
     Alerts,
+}
+
+impl Default for View {
+    fn default() -> Self {
+        View::Inventory
+    }
+}
+
+impl serde::Serialize for View {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(match self {
+            View::Inventory => "inventory",
+            View::Editor => "editor",
+            View::Settings => "settings",
+            View::UserManagement => "user_management",
+            View::AuditLog => "audit_log",
+            View::Alerts => "alerts",
+        })
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for View {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(match s.as_str() {
+            "editor" => View::Editor,
+            "settings" => View::Settings,
+            "user_management" => View::UserManagement,
+            "audit_log" => View::AuditLog,
+            "alerts" => View::Alerts,
+            _ => View::Inventory,
+        })
+    }
 }

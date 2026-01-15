@@ -11,6 +11,9 @@ pub fn view<'a>(
     category_input: &'a str,
     latest_version: Option<&'a crate::update_checker::UpdateInfo>,
     import_error: Option<&'a str>,
+    checking_for_updates: bool,
+    downloading_update: bool,
+    update_message: Option<&'a str>,
     theme: &'a crate::messages::AppTheme,
 ) -> Element<'a, Message> {
     let title = text("Settings").size(32);
@@ -331,48 +334,116 @@ pub fn view<'a>(
             text(format!("Current Version: v{}", current_version)).size(14),
             match latest_version {
                 Some(update) => {
-                    button(
-                        row![
-                            icons::Icon::Alerts.view(icons::IconSize::Small, theme),
-                            text(format!("Update Available: {}", update.version)),
-                        ]
-                        .spacing(theme::SPACING_SM)
-                        .align_y(iced::Alignment::Center)
-                    )
-                        .on_press(Message::DownloadUpdate(update.download_url.clone()))
-                        .padding(8)
-                        .style(
-                            |_theme: &iced::Theme, _status: iced::widget::button::Status| {
-                            iced::widget::button::Style {
-                                background: Some(iced::Background::Color(iced::Color::from_rgb(
-                                    0.2, 0.6, 0.3,
-                                ))),
-                                text_color: iced::Color::WHITE,
-                                border: iced::Border {
-                                    radius: 5.0.into(),
+                    if downloading_update {
+                        button(
+                            row![
+                                text("Downloading...").size(14),
+                            ]
+                            .spacing(theme::SPACING_SM)
+                            .align_y(iced::Alignment::Center)
+                        )
+                            .padding(8)
+                            .style(
+                                |_theme: &iced::Theme, _status: iced::widget::button::Status| {
+                                iced::widget::button::Style {
+                                    background: Some(iced::Background::Color(iced::Color::from_rgb(
+                                        0.5, 0.5, 0.5,
+                                    ))),
+                                    text_color: iced::Color::WHITE,
+                                    border: iced::Border {
+                                        radius: 5.0.into(),
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
-                                },
-                                ..Default::default()
+                                }
                             }
-                        }
-                    )
+                        )
+                    } else {
+                        button(
+                            row![
+                                icons::Icon::Alerts.view(icons::IconSize::Small, theme),
+                                text(format!("Update Available: {}", update.version)),
+                            ]
+                            .spacing(theme::SPACING_SM)
+                            .align_y(iced::Alignment::Center)
+                        )
+                            .on_press(Message::DownloadUpdate(update.download_url.clone()))
+                            .padding(8)
+                            .style(
+                                |_theme: &iced::Theme, _status: iced::widget::button::Status| {
+                                iced::widget::button::Style {
+                                    background: Some(iced::Background::Color(iced::Color::from_rgb(
+                                        0.2, 0.6, 0.3,
+                                    ))),
+                                    text_color: iced::Color::WHITE,
+                                    border: iced::Border {
+                                        radius: 5.0.into(),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                }
+                            }
+                        )
+                    }
                 }
                 None => {
-                    button("Check for Updates")
-                        .on_press(Message::CheckForUpdates)
-                        .padding(8)
+                    if checking_for_updates {
+                        button(
+                            row![
+                                text("Checking...").size(14),
+                            ]
+                            .spacing(theme::SPACING_SM)
+                            .align_y(iced::Alignment::Center)
+                        )
+                            .padding(8)
+                            .style(
+                                |_theme: &iced::Theme, _status: iced::widget::button::Status| {
+                                iced::widget::button::Style {
+                                    background: Some(iced::Background::Color(iced::Color::from_rgb(
+                                        0.5, 0.5, 0.5,
+                                    ))),
+                                    text_color: iced::Color::WHITE,
+                                    border: iced::Border {
+                                        radius: 5.0.into(),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                }
+                            }
+                        )
+                    } else {
+                        button("Check for Updates")
+                            .on_press(Message::CheckForUpdates)
+                            .padding(8)
+                    }
                 }
             },
         ]
         .spacing(10)
         .align_y(iced::Alignment::Center),
-        text("Checks GitHub for new releases")
-            .size(12)
-            .style(move |_iced_theme: &iced::Theme| {
-                iced::widget::text::Style {
-                    color: Some(crate::theme::text_secondary_color(theme)),
-                }
-            }),
+        if let Some(msg) = update_message {
+            text(msg)
+                .size(12)
+                .style(move |_iced_theme: &iced::Theme| {
+                    iced::widget::text::Style {
+                        color: Some(if checking_for_updates || downloading_update {
+                            crate::theme::primary_color(theme)
+                        } else if msg.contains("Failed") || msg.contains("error") {
+                            crate::theme::danger_color(theme)
+                        } else {
+                            crate::theme::success_color(theme)
+                        }),
+                    }
+                })
+        } else {
+            text("Checks GitHub for new releases")
+                .size(12)
+                .style(move |_iced_theme: &iced::Theme| {
+                    iced::widget::text::Style {
+                        color: Some(crate::theme::text_secondary_color(theme)),
+                    }
+                })
+        },
     ]
     .spacing(10)
     .padding(20);

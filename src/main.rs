@@ -5,6 +5,7 @@ mod app_state;
 mod audit;
 mod auth;
 mod calculator;
+mod calculator_window;
 mod errors;
 mod handlers;
 mod icon;
@@ -23,6 +24,11 @@ use app_state::{AppState, InventoryApp};
 pub use messages::Message;
 
 fn main() -> iced::Result {
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|arg| arg == "--calculator") {
+        return calculator_window::run();
+    }
+
     iced::application(
         "Inventory Manager",
         InventoryApp::update,
@@ -36,5 +42,5 @@ fn main() -> iced::Result {
         icon: icon::load_icon(),
         ..Default::default()
     })
-        .run_with(InventoryApp::new)
+    .run_with(InventoryApp::new)
 }

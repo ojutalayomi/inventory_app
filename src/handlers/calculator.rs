@@ -4,10 +4,10 @@ use crate::messages::CalculatorOp;
 
 impl InventoryApp {
     pub fn handle_toggle_calculator(&mut self) {
-        self.calculator.toggle_visibility();
-        // Set default position if not set
-        if self.calculator.visible && self.calculator.position.is_none() {
-            self.calculator.set_position(450.0, 200.0);
+        if let Ok(exe_path) = std::env::current_exe() {
+            let _ = std::process::Command::new(exe_path)
+                .arg("--calculator")
+                .spawn();
         }
     }
 

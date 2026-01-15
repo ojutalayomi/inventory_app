@@ -1,4 +1,5 @@
 use iced::Task;
+use std::collections::HashSet;
 use crate::{InventoryApp, Message};
 use crate::messages::{AppTheme, LayoutStyle, SavedState};
 use crate::audit::{AuditAction, AuditEntry};
@@ -63,6 +64,10 @@ impl InventoryApp {
             auth_store: self.auth_store.clone(),
             audit_log: self.audit_log.clone(),
             alert_manager: self.alert_manager.clone(),
+            sidebar_collapsed: self.sidebar_collapsed,
+            show_alerts_panel: self.show_alerts_panel,
+            show_search_panel: self.show_search_panel,
+            current_view: self.current_view.clone(),
         };
         let task = Task::perform(
             async move {
@@ -156,7 +161,13 @@ impl InventoryApp {
         let imported_state: SavedState = match serde_json::from_str(&file_contents) {
             Ok(state) => state,
             Err(e) => {
-                self.import_error = Some(format!("Invalid JSON format: {}", e));
+                // Provide more helpful error messages
+                let error_msg = if e.to_string().contains("password_hash") {
+                    format!("Import error: The file format is incompatible. Missing required field 'password_hash'. This may be an old export format. Please export a new file from the current version and try again.")
+                } else {
+                    format!("Invalid JSON format: {}. Please ensure the file is a valid export from this application.", e)
+                };
+                self.import_error = Some(error_msg);
                 return Task::none();
             }
         };
@@ -174,16 +185,65 @@ impl InventoryApp {
             self.audit_log.add_entry(audit_entry);
         }
         
-        // Replace current data with imported data (Option A from plan)
-        // This completely replaces existing data
-        self.items = imported_state.items.clone();
+        // Merge imported data with existing data
+        // Items: Add items that don't exist (check by ID and SKU to avoid duplicates)
+        let existing_item_ids: HashSet<String> = 
+            self.items.iter().map(|item| item.id.clone()).collect();
+        let existing_skus: HashSet<String> = 
+            self.items.iter().map(|item| item.sku.to_lowercase()).collect();
+        
+        for imported_item in imported_state.items {
+            // Skip if item with same ID already exists
+            if existing_item_ids.contains(&imported_item.id) {
+                continue;
+            }
+            // Skip if item with same SKU already exists (case-insensitive)
+            if existing_skus.contains(&imported_item.sku.to_lowercase()) {
+                continue;
+            }
+            // Add the new item
+            self.items.push(imported_item);
+        }
         self.filtered_items = self.search_filter.apply(&self.items);
-        self.notes = imported_state.notes.clone();
+        
+        // Notes: Add notes that don't exist (check by ID)
+        let existing_note_ids: HashSet<String> = 
+            self.notes.iter().map(|note| note.id.clone()).collect();
+        
+        for imported_note in imported_state.notes {
+            if !existing_note_ids.contains(&imported_note.id) {
+                self.notes.push(imported_note);
+            }
+        }
+        
+        // Settings: Replace with imported settings (user likely wants imported preferences)
         self.settings = imported_state.settings.clone();
-        self.auth_store = imported_state.auth_store.clone();
-        self.audit_log = imported_state.audit_log.clone();
-        self.alert_manager = imported_state.alert_manager.clone();
+        
+        // Auth store: Don't merge users from import (security - passwords aren't serialized)
+        // Keep existing users, but ensure default admin exists
+        self.auth_store.ensure_default_admin();
+        
+        // Audit log: Merge entries (append imported entries)
+        // Check existing entry IDs to avoid duplicates
+        let existing_audit_ids: HashSet<String> = 
+            self.audit_log.get_entries().iter().map(|e| e.id.clone()).collect();
+        
+        for entry in imported_state.audit_log.get_entries() {
+            // Only add if entry ID doesn't already exist
+            if !existing_audit_ids.contains(&entry.id) {
+                self.audit_log.add_entry(entry.clone());
+            }
+        }
+        
+        // Alert manager: Replace settings, then regenerate alerts from merged inventory
+        *self.alert_manager.settings_mut() = imported_state.alert_manager.settings().clone();
         self.alert_manager.update_from_inventory(&self.items);
+        
+        // UI state: Keep current state (don't import UI preferences)
+        // self.sidebar_collapsed stays as is
+        // self.show_alerts_panel stays as is
+        // self.show_search_panel stays as is
+        // self.current_view stays as is
         
         // Update settings inputs
         self.settings_interval_input = self.settings.auto_save_interval.to_string();
@@ -194,16 +254,36 @@ impl InventoryApp {
             self.calculator.set_position(pos.0, pos.1);
         }
         
-        // Select first note if any exist
-        if !self.notes.is_empty() {
+        // Update note selection: keep current selection if it still exists, otherwise select first note
+        use iced::widget::text_editor;
+        if let Some(ref current_note_id) = self.selected_note_id {
+            // Check if current note still exists after merge
+            if self.notes.iter().any(|n| n.id == *current_note_id) {
+                // Current note still exists, update editor content
+                if let Some(note) = self.notes.iter().find(|n| n.id == *current_note_id) {
+                    self.note_title_input = note.title.clone();
+                    self.editor_content = text_editor::Content::with_text(&note.content);
+                }
+            } else if !self.notes.is_empty() {
+                // Current note doesn't exist, select first note
+                self.selected_note_id = Some(self.notes[0].id.clone());
+                self.note_title_input = self.notes[0].title.clone();
+                self.editor_content = text_editor::Content::with_text(&self.notes[0].content);
+            } else {
+                // No notes exist
+                self.selected_note_id = None;
+                self.note_title_input.clear();
+                self.editor_content = text_editor::Content::new();
+            }
+        } else if !self.notes.is_empty() {
+            // No note was selected, select first note
             self.selected_note_id = Some(self.notes[0].id.clone());
             self.note_title_input = self.notes[0].title.clone();
-            use iced::widget::text_editor;
             self.editor_content = text_editor::Content::with_text(&self.notes[0].content);
         } else {
+            // No notes exist
             self.selected_note_id = None;
             self.note_title_input.clear();
-            use iced::widget::text_editor;
             self.editor_content = text_editor::Content::new();
         }
         
@@ -251,7 +331,9 @@ impl InventoryApp {
         self.show_clear_confirm = false;
     }
 
-    pub fn handle_check_for_updates(&self) -> Task<Message> {
+    pub fn handle_check_for_updates(&mut self) -> Task<Message> {
+        self.checking_for_updates = true;
+        self.update_message = Some("Checking for updates...".to_string());
         let update_checker = self.update_checker.clone();
         Task::perform(
             async move {
@@ -262,23 +344,30 @@ impl InventoryApp {
     }
 
     pub fn handle_update_check_complete(&mut self, result: Result<Option<crate::update_checker::UpdateInfo>, String>) {
+        self.checking_for_updates = false;
         match result {
             Ok(Some(update_info)) => {
+                let version = update_info.version.clone();
                 self.latest_version = Some(update_info);
                 self.show_update_notification = true;
+                self.update_message = Some(format!("Update available: v{}", version));
             }
             Ok(None) => {
                 // No update available
                 self.latest_version = None;
+                self.update_message = Some("You are running the latest version.".to_string());
             }
             Err(e) => {
                 eprintln!("Update check failed: {}", e);
                 self.latest_version = None;
+                self.update_message = Some(format!("Failed to check for updates: {}", e));
             }
         }
     }
 
-    pub fn handle_download_update(&self, download_url: String) -> Task<Message> {
+    pub fn handle_download_update(&mut self, download_url: String) -> Task<Message> {
+        self.downloading_update = true;
+        self.update_message = Some("Downloading update...".to_string());
         let update_checker = self.update_checker.clone();
         Task::perform(
             async move {
@@ -288,10 +377,15 @@ impl InventoryApp {
                 Ok(path) => Message::InstallUpdate(path),
                 Err(e) => {
                     eprintln!("Download failed: {}", e);
-                    Message::CloseUpdateNotification
+                    Message::UpdateDownloadFailed(e)
                 }
             },
         )
+    }
+
+    pub fn handle_update_download_failed(&mut self, error: String) {
+        self.downloading_update = false;
+        self.update_message = Some(format!("Download failed: {}", error));
     }
 
     pub fn handle_install_update(&mut self, path: std::path::PathBuf) {

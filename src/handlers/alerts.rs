@@ -2,8 +2,9 @@ use iced::Task;
 use crate::{InventoryApp, Message};
 
 impl InventoryApp {
-    pub fn handle_toggle_alerts_panel(&mut self) {
+    pub fn handle_toggle_alerts_panel(&mut self) -> Task<Message> {
         self.show_alerts_panel = !self.show_alerts_panel;
+        self.auto_save()
     }
 
     pub fn handle_acknowledge_alert(&mut self, alert_id: String) -> Task<Message> {

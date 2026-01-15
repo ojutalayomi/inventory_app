@@ -100,4 +100,31 @@ impl AuthStore {
         self.users.remove(user_id).ok_or("User not found")?;
         Ok(())
     }
+
+    /// Ensures the default admin user exists with correct credentials
+    /// This is needed because password_hash is not serialized for security,
+    /// so loaded users will have invalid password hashes
+    pub fn ensure_default_admin(&mut self) {
+        // Check if admin user exists
+        let admin_exists = self.users.values().any(|u| u.username == "admin");
+        
+        if !admin_exists {
+            // Create default admin user
+            if let Ok(admin) = User::new("admin".to_string(), "admin123", UserRole::Admin) {
+                self.users.insert(admin.id.clone(), admin);
+            }
+        } else {
+            // Admin exists, but check if password_hash is valid
+            // If it's the default invalid hash, recreate the admin user
+            if let Some(admin_user) = self.users.values_mut().find(|u| u.username == "admin") {
+                let default_hash = "$2b$12$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+                if admin_user.password_hash == default_hash {
+                    // Password hash is invalid, recreate admin user
+                    if let Ok(new_admin) = User::new("admin".to_string(), "admin123", UserRole::Admin) {
+                        admin_user.password_hash = new_admin.password_hash;
+                    }
+                }
+            }
+        }
+    }
 }

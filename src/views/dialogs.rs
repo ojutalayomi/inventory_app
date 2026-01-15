@@ -63,8 +63,11 @@ pub fn view_clear_confirm<'a>(theme: &'a AppTheme) -> Element<'a, Message> {
         )
         .width(400)
         .style(move |_iced_theme: &iced::Theme| container::Style {
-            background: Some(iced::Background::Color(iced::Color::from_rgb(
-                0.15, 0.15, 0.15,
+            background: Some(iced::Background::Color(iced::Color::from_rgba(
+                crate::theme::surface_color(theme).r,
+                crate::theme::surface_color(theme).g,
+                crate::theme::surface_color(theme).b,
+                0.7,
             ))),
             border: iced::Border {
                 color: crate::theme::border_color(theme),

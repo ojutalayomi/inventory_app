@@ -87,6 +87,9 @@ pub struct InventoryApp {
     pub latest_version: Option<update_checker::UpdateInfo>,
     pub show_update_notification: bool,
     pub update_download_progress: Option<f32>,
+    pub checking_for_updates: bool,
+    pub downloading_update: bool,
+    pub update_message: Option<String>,
     
     // View state
     pub current_view: View,
@@ -153,6 +156,9 @@ impl InventoryApp {
                 latest_version: None,
                 show_update_notification: false,
                 update_download_progress: None,
+                checking_for_updates: false,
+                downloading_update: false,
+                update_message: None,
                 current_view: View::Inventory,
                 sidebar_collapsed: false,
             },
@@ -211,10 +217,7 @@ impl InventoryApp {
             }
 
             // Search and Filter Messages
-            Message::ToggleSearchPanel => {
-                self.handle_toggle_search_panel();
-                Task::none()
-            }
+            Message::ToggleSearchPanel => self.handle_toggle_search_panel(),
             Message::SearchQueryChanged(query) => {
                 self.handle_search_query_changed(query);
                 Task::none()
@@ -257,10 +260,7 @@ impl InventoryApp {
             }
 
             // Alert Messages
-            Message::ToggleAlertsPanel => {
-                self.handle_toggle_alerts_panel();
-                Task::none()
-            }
+            Message::ToggleAlertsPanel => self.handle_toggle_alerts_panel(),
             Message::AcknowledgeAlert(alert_id) => self.handle_acknowledge_alert(alert_id),
             Message::AcknowledgeAllAlerts => self.handle_acknowledge_all_alerts(),
             Message::ClearAcknowledgedAlerts => self.handle_clear_acknowledged_alerts(),
@@ -392,7 +392,7 @@ impl InventoryApp {
             Message::LayoutStyleChanged(style) => self.handle_layout_style_changed(style),
             Message::ToggleSidebar => {
                 self.sidebar_collapsed = !self.sidebar_collapsed;
-                Task::none()
+                self.auto_save()
             }
             Message::ExportData => self.handle_export_data(),
             Message::ImportData => self.handle_import_data(),
@@ -419,6 +419,10 @@ impl InventoryApp {
                 self.handle_install_update(path);
                 Task::none()
             }
+            Message::UpdateDownloadFailed(error) => {
+                self.handle_update_download_failed(error);
+                Task::none()
+            }
             Message::CloseUpdateNotification => {
                 self.handle_close_update_notification();
                 Task::none()
@@ -434,7 +438,14 @@ impl InventoryApp {
         self.notes = state.notes;
         self.settings = state.settings;
         self.auth_store = state.auth_store;
+        // Ensure default admin user exists with valid password hash
+        // This is needed because password_hash is not serialized for security
+        self.auth_store.ensure_default_admin();
         self.audit_log = state.audit_log;
+        self.sidebar_collapsed = state.sidebar_collapsed;
+        self.show_alerts_panel = state.show_alerts_panel;
+        self.show_search_panel = state.show_search_panel;
+        self.current_view = state.current_view;
         self.settings_interval_input = self.settings.auto_save_interval.to_string();
         self.settings_category_input = self.settings.default_category.clone();
         if let Some(pos) = state.calculator_position {
@@ -496,6 +507,10 @@ impl InventoryApp {
             auth_store: self.auth_store.clone(),
             audit_log: self.audit_log.clone(),
             alert_manager: self.alert_manager.clone(),
+            sidebar_collapsed: self.sidebar_collapsed,
+            show_alerts_panel: self.show_alerts_panel,
+            show_search_panel: self.show_search_panel,
+            current_view: self.current_view.clone(),
         };
         Task::perform(
             async move {

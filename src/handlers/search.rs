@@ -1,9 +1,11 @@
-use crate::InventoryApp;
+use iced::Task;
+use crate::{InventoryApp, Message};
 use crate::search::SortField;
 
 impl InventoryApp {
-    pub fn handle_toggle_search_panel(&mut self) {
+    pub fn handle_toggle_search_panel(&mut self) -> Task<Message> {
         self.show_search_panel = !self.show_search_panel;
+        self.auto_save()
     }
 
     pub fn handle_search_query_changed(&mut self, query: String) {

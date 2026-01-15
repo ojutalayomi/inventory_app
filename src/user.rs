@@ -38,12 +38,19 @@ impl UserRole {
 pub struct User {
     pub id: String,
     pub username: String,
-    #[serde(skip_serializing)]
+    #[serde(skip_serializing, default = "default_password_hash")]
     pub password_hash: String,
     pub role: UserRole,
     pub created_at: i64,
     pub last_login: Option<i64>,
     pub active: bool,
+}
+
+fn default_password_hash() -> String {
+    // Default hash that will never match any password
+    // Users imported without password_hash will need to reset their password
+    "$2b$12$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        .to_string()
 }
 
 impl User {
