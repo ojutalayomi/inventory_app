@@ -9,6 +9,7 @@ pub fn view<'a>(
     settings: &'a AppSettings,
     interval_input: &'a str,
     category_input: &'a str,
+    notification_throttle_input: &'a str,
     latest_version: Option<&'a crate::update_checker::UpdateInfo>,
     import_error: Option<&'a str>,
     checking_for_updates: bool,
@@ -214,6 +215,42 @@ pub fn view<'a>(
         )
         .on_toggle(|_| Message::ToggleLoadingScreen),
         text("Theme changes apply immediately")
+            .size(12)
+            .style(move |_iced_theme: &iced::Theme| {
+                iced::widget::text::Style {
+                    color: Some(crate::theme::text_secondary_color(theme)),
+                }
+            }),
+    ]
+    .spacing(10)
+    .padding(20);
+
+    let notifications_section = column![
+        text("Notifications").size(20).style(move |_iced_theme: &iced::Theme| {
+            iced::widget::text::Style {
+                color: Some(crate::theme::text_color(theme)),
+            }
+        }),
+        checkbox(
+            "Enable device notifications",
+            settings.device_notifications_enabled,
+        )
+        .on_toggle(|_| Message::ToggleDeviceNotifications),
+        checkbox(
+            "Notify when updates are available",
+            settings.update_notifications_enabled,
+        )
+        .on_toggle(|_| Message::ToggleUpdateNotifications),
+        row![
+            text("Notification throttle (seconds):").size(14),
+            text_input("30", notification_throttle_input)
+                .on_input(Message::NotificationThrottleChanged)
+                .width(100)
+                .padding(5),
+        ]
+        .spacing(10)
+        .align_y(iced::Alignment::Center),
+        text("Used to avoid repeating the same alert too often")
             .size(12)
             .style(move |_iced_theme: &iced::Theme| {
                 iced::widget::text::Style {
@@ -504,6 +541,17 @@ pub fn view<'a>(
                 }
             }),
             container(appearance_section).style(move |_iced_theme: &iced::Theme| {
+                container::Style {
+                    background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
+                    border: iced::Border {
+                        color: crate::theme::border_color(theme),
+                        width: 1.0,
+                        radius: 5.0.into(),
+                    },
+                    ..Default::default()
+                }
+            }),
+            container(notifications_section).style(move |_iced_theme: &iced::Theme| {
                 container::Style {
                     background: Some(iced::Background::Color(crate::theme::surface_color(theme))),
                     border: iced::Border {

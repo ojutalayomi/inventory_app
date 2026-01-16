@@ -159,7 +159,7 @@ impl InventoryApp {
                 
                 self.items.push(new_item);
                 self.filtered_items = self.search_filter.apply(&self.items);
-                self.alert_manager.update_from_inventory(&self.items);
+                self.update_alerts_from_inventory();
             }
             Some(ItemDialogMode::Edit(item_id)) => {
                 if let Some(item) = self.items.iter_mut().find(|i| i.id == *item_id) {
@@ -204,13 +204,15 @@ impl InventoryApp {
         self.clear_item_inputs();
         self.item_validation_error = None;
         self.filtered_items = self.search_filter.apply(&self.items);
-        self.alert_manager.update_from_inventory(&self.items);
+        self.update_alerts_from_inventory();
         self.auto_save()
     }
 
     pub fn handle_delete_item(&mut self, item_id: String) -> Task<Message> {
         // Check permissions
         if let Some(session) = &self.session {
+            let user_id = session.user_id.clone();
+            let username = session.username.clone();
             if session.role.can_delete() {
                 let deleted_item = self
                     .items
@@ -220,13 +222,13 @@ impl InventoryApp {
                 
                 self.items.retain(|item| item.id != item_id);
                 self.filtered_items = self.search_filter.apply(&self.items);
-                self.alert_manager.update_from_inventory(&self.items);
+                self.update_alerts_from_inventory();
                 
                 // Log item deletion
                 if let Some(item_name) = deleted_item {
                     let audit_entry = AuditEntry::new(
-                        session.user_id.clone(),
-                        session.username.clone(),
+                        user_id,
+                        username,
                         AuditAction::ItemDeleted,
                         "item".to_string(),
                         Some(item_id.clone()),

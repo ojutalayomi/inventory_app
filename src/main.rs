@@ -13,6 +13,7 @@ mod icons;
 mod inventory;
 mod messages;
 mod note;
+mod notifications;
 mod persistence;
 mod search;
 mod theme;

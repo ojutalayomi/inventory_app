@@ -92,6 +92,9 @@ pub enum Message {
     ThemeChanged(AppTheme),
     ToggleLoadingScreen,
     LayoutStyleChanged(LayoutStyle),
+    ToggleDeviceNotifications,
+    ToggleUpdateNotifications,
+    NotificationThrottleChanged(String),
     ToggleSidebar,
     ExportData,
     ImportData,
@@ -201,6 +204,12 @@ pub struct AppSettings {
     pub show_loading_screen: bool,
     #[serde(default)]
     pub layout_style: LayoutStyle,
+    #[serde(default)]
+    pub device_notifications_enabled: bool,
+    #[serde(default)]
+    pub update_notifications_enabled: bool,
+    #[serde(default)]
+    pub notification_throttle_seconds: u32,
 }
 
 impl Default for AppSettings {
@@ -212,6 +221,9 @@ impl Default for AppSettings {
             theme: AppTheme::Dark,
             show_loading_screen: true,
             layout_style: LayoutStyle::default(),
+            device_notifications_enabled: true,
+            update_notifications_enabled: true,
+            notification_throttle_seconds: 30,
         }
     }
 }

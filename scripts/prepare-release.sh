@@ -31,6 +31,16 @@ if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
+# Check for changelog entry
+if [ ! -f CHANGELOG.md ] || ! grep -q "^## \\[${VERSION}\\]" CHANGELOG.md; then
+    echo -e "${YELLOW}Warning: No CHANGELOG entry found for ${VERSION}${NC}"
+    read -p "Continue anyway? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
+
 echo -e "${GREEN}Preparing release ${TAG}${NC}"
 
 # Check if git repository is clean

@@ -119,10 +119,10 @@ impl AlertManager {
         &mut self.settings
     }
 
-    pub fn update_from_inventory(&mut self, items: &[InventoryItem]) {
+    pub fn update_from_inventory(&mut self, items: &[InventoryItem]) -> Vec<StockAlert> {
         if !self.settings.enabled {
             self.active_alerts.clear();
-            return;
+            return Vec::new();
         }
 
         let mut new_alerts = Vec::new();
@@ -162,7 +162,7 @@ impl AlertManager {
             }
         }
 
-        self.active_alerts.extend(new_alerts);
+        self.active_alerts.extend(new_alerts.clone());
 
         // Remove acknowledged alerts and move to history
         let acknowledged = self.active_alerts.drain_filter(|a| a.acknowledged);
@@ -172,6 +172,8 @@ impl AlertManager {
         if self.alert_history.len() > 100 {
             self.alert_history.drain(0..self.alert_history.len() - 100);
         }
+
+        new_alerts
     }
 
     pub fn get_active_alerts(&self) -> &[StockAlert] {

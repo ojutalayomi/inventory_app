@@ -652,6 +652,7 @@ impl InventoryApp {
                 &self.settings,
                 &self.settings_interval_input,
                 &self.settings_category_input,
+                &self.settings_notification_throttle_input,
                 self.latest_version.as_ref(),
                 self.import_error.as_deref(),
                 self.checking_for_updates,

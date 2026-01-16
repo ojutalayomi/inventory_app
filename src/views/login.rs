@@ -10,13 +10,18 @@ pub fn view<'a>(
     password: &'a str,
     error_message: Option<&'a str>,
     app_theme: &'a AppTheme,
+    logging_in: bool,
 ) -> Element<'a, Message> {
     // App title with gradient-like effect using multiple colors
-    let title = text("Inventory Manager")
-        .size(theme::TEXT_DISPLAY)
-        .style(move |_theme: &iced::Theme| text::Style {
-            color: Some(theme::primary_color(app_theme)),
-        });
+    let title = container(
+        text("Inventory Manager")
+            .size(theme::TEXT_DISPLAY)
+            .style(move |_theme: &iced::Theme| text::Style {
+                color: Some(theme::primary_color(app_theme)),
+            })
+    )
+    .width(Length::Shrink)
+    .center_x(Length::Fill);
     
     let subtitle = text("Welcome back! Please log in to continue")
         .size(theme::TEXT_BODY_LARGE)
@@ -31,9 +36,13 @@ pub fn view<'a>(
             .style(move |_theme: &iced::Theme| text::Style {
                 color: Some(theme::text_color(app_theme)),
             }),
-        text_input("Enter your username", username)
-            .on_input(Message::UsernameChanged)
-            .on_submit(Message::AttemptLogin)
+        {
+            let mut input = text_input("Enter your username", username);
+            if !logging_in {
+                input = input.on_input(Message::UsernameChanged).on_submit(Message::AttemptLogin);
+            }
+            input
+        }
             .padding(theme::SPACING_LG)
             .size(theme::TEXT_BODY)
             .style(move |theme_iced: &iced::Theme, status: text_input::Status| {
@@ -64,10 +73,13 @@ pub fn view<'a>(
             .style(move |_theme: &iced::Theme| text::Style {
                 color: Some(theme::text_color(app_theme)),
             }),
-        text_input("Enter your password", password)
-            .on_input(Message::PasswordChanged)
-            .on_submit(Message::AttemptLogin)
-            .secure(true)
+        {
+            let mut input = text_input("Enter your password", password).secure(true);
+            if !logging_in {
+                input = input.on_input(Message::PasswordChanged).on_submit(Message::AttemptLogin);
+            }
+            input
+        }
             .padding(theme::SPACING_LG)
             .size(theme::TEXT_BODY)
             .style(move |theme_iced: &iced::Theme, status: text_input::Status| {
@@ -92,42 +104,85 @@ pub fn view<'a>(
     .spacing(theme::SPACING_SM);
 
     // Modern gradient login button
-    let login_button = button(
-        container(
-            row![
-                icons::Icon::Lock.view(icons::IconSize::Medium, app_theme),
-                text("Log In").size(theme::TEXT_BODY_LARGE),
-            ]
-            .spacing(theme::SPACING_SM)
-            .align_y(iced::Alignment::Center)
+    let login_button = if logging_in {
+        button(
+            container(
+                row![
+                    text("Logging in...").size(theme::TEXT_BODY_LARGE),
+                ]
+                .spacing(theme::SPACING_SM)
+                .align_y(iced::Alignment::Center)
+            )
+            .width(Length::Fill)
+            .center_x(Length::Fill)
         )
+        .padding(theme::SPACING_LG)
         .width(Length::Fill)
-        .center_x(Length::Fill)
-    )
-    .on_press(Message::AttemptLogin)
-    .padding(theme::SPACING_LG)
-    .width(Length::Fill)
-    .style(move |_theme: &iced::Theme, status: button::Status| {
-        let bg_color = match status {
-            button::Status::Hovered => theme::primary_dark_color(app_theme),
-            _ => theme::primary_color(app_theme),
-        };
-        
-        button::Style {
-            background: Some(iced::Background::Color(bg_color)),
-            text_color: Color::WHITE,
-            border: iced::Border {
-                radius: theme::RADIUS_MD.into(),
+        .style(move |_theme: &iced::Theme, _status: button::Status| {
+            let bg_color = theme::primary_color(app_theme);
+            let shadow_color = match app_theme {
+                AppTheme::Dark => Color::from_rgba(0.0, 0.0, 0.0, 0.4),
+                AppTheme::Light => Color::from_rgba(0.0, 0.0, 0.0, 0.15),
+            };
+            
+            button::Style {
+                background: Some(iced::Background::Color(bg_color)),
+                text_color: Color::WHITE,
+                border: iced::Border {
+                    radius: theme::RADIUS_MD.into(),
+                    ..Default::default()
+                },
+                shadow: iced::Shadow {
+                    color: shadow_color,
+                    offset: iced::Vector::new(0.0, 4.0),
+                    blur_radius: 12.0,
+                },
                 ..Default::default()
-            },
-            shadow: iced::Shadow {
-                color: Color::from_rgba(0.0, 0.0, 0.0, 0.2),
-                offset: iced::Vector::new(0.0, 4.0),
-                blur_radius: 12.0,
-            },
-            ..Default::default()
-        }
-    });
+            }
+        })
+    } else {
+        button(
+            container(
+                row![
+                    icons::Icon::Lock.view(icons::IconSize::Medium, app_theme),
+                    text("Log In").size(theme::TEXT_BODY_LARGE),
+                ]
+                .spacing(theme::SPACING_SM)
+                .align_y(iced::Alignment::Center)
+            )
+            .width(Length::Fill)
+            .center_x(Length::Fill)
+        )
+        .on_press(Message::AttemptLogin)
+        .padding(theme::SPACING_LG)
+        .width(Length::Fill)
+        .style(move |_theme: &iced::Theme, status: button::Status| {
+            let bg_color = match status {
+                button::Status::Hovered => theme::primary_dark_color(app_theme),
+                _ => theme::primary_color(app_theme),
+            };
+            
+            let shadow_color = match app_theme {
+                AppTheme::Dark => Color::from_rgba(0.0, 0.0, 0.0, 0.4),
+                AppTheme::Light => Color::from_rgba(0.0, 0.0, 0.0, 0.15),
+            };
+            
+            button::Style {
+                background: Some(iced::Background::Color(bg_color)),
+                text_color: Color::WHITE,
+                border: iced::Border {
+                    radius: theme::RADIUS_MD.into(),
+                    ..Default::default()
+                },
+                shadow: iced::Shadow {
+                    color: shadow_color,
+                    offset: iced::Vector::new(0.0, 4.0),
+                    blur_radius: 12.0,
+                },
+                ..Default::default()
+            }
+        })
+    };
 
     // Build the login card content
     let mut card_content = column![
@@ -141,7 +196,7 @@ pub fn view<'a>(
     ]
     .spacing(theme::SPACING_LG)
     .padding(theme::SPACING_3XL)
-    .width(500)
+    .width(600)
     .align_x(iced::Alignment::Center);
 
     // Error message if present
@@ -151,28 +206,37 @@ pub fn view<'a>(
             container(
                 row![
                     icons::Icon::AlertTriangle.view(icons::IconSize::Medium, app_theme),
-                    text(error).size(theme::TEXT_BODY)
+                    text(error)
+                        .size(theme::TEXT_BODY)
+                        .style(move |_theme: &iced::Theme| text::Style {
+                            color: Some(theme::danger_color(app_theme)),
+                        })
                 ]
                 .spacing(theme::SPACING_SM)
                 .align_y(iced::Alignment::Center)
             )
             .padding(theme::SPACING_LG)
             .width(Length::Fill)
-            .style(move |_theme: &iced::Theme| container::Style {
-                background: Some(iced::Background::Color(
-                    Color::from_rgba(
-                        theme::danger_color(app_theme).r,
-                        theme::danger_color(app_theme).g,
-                        theme::danger_color(app_theme).b,
-                        0.2,
-                    )
-                )),
-                border: iced::Border {
-                    color: theme::danger_color(app_theme),
-                    width: 1.0,
-                    radius: theme::RADIUS_MD.into(),
-                },
-                ..Default::default()
+            .style(move |_theme: &iced::Theme| {
+                let bg_color = Color::from_rgba(
+                    theme::danger_color(app_theme).r,
+                    theme::danger_color(app_theme).g,
+                    theme::danger_color(app_theme).b,
+                    match app_theme {
+                        AppTheme::Dark => 0.3,
+                        AppTheme::Light => 0.1,
+                    },
+                );
+                
+                container::Style {
+                    background: Some(iced::Background::Color(bg_color)),
+                    border: iced::Border {
+                        color: theme::danger_color(app_theme),
+                        width: 1.0,
+                        radius: theme::RADIUS_MD.into(),
+                    },
+                    ..Default::default()
+                }
             })
         );
     }
@@ -215,19 +279,26 @@ pub fn view<'a>(
 
     // Modern login card with gradient border effect
     let login_card = container(card_content)
-        .style(move |_theme: &iced::Theme| container::Style {
-            background: Some(iced::Background::Color(theme::surface_color(app_theme))),
-            border: iced::Border {
-                color: theme::primary_color(app_theme),
-                width: 2.0,
-                radius: theme::RADIUS_LG.into(),
-            },
-            shadow: iced::Shadow {
-                color: Color::from_rgba(0.0, 0.0, 0.0, 0.3),
-                offset: iced::Vector::new(0.0, 12.0),
-                blur_radius: 36.0,
-            },
-            ..Default::default()
+        .style(move |_theme: &iced::Theme| {
+            let shadow_color = match app_theme {
+                AppTheme::Dark => Color::from_rgba(0.0, 0.0, 0.0, 0.5),
+                AppTheme::Light => Color::from_rgba(0.0, 0.0, 0.0, 0.1),
+            };
+            
+            container::Style {
+                background: Some(iced::Background::Color(theme::surface_color(app_theme))),
+                border: iced::Border {
+                    color: theme::primary_color(app_theme),
+                    width: 2.0,
+                    radius: theme::RADIUS_LG.into(),
+                },
+                shadow: iced::Shadow {
+                    color: shadow_color,
+                    offset: iced::Vector::new(0.0, 12.0),
+                    blur_radius: 36.0,
+                },
+                ..Default::default()
+            }
         });
 
     // Full screen container with gradient background

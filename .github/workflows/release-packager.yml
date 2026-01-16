@@ -33,6 +33,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -128,6 +130,70 @@ jobs:
           echo "Artifacts directory structure:"
           find ./artifacts -type f
 
+      - name: Generate release notes
+        run: |
+          git fetch --tags --force
+          CURRENT_TAG="${GITHUB_REF#refs/tags/}"
+          VERSION_NO_V="${CURRENT_TAG#v}"
+          if [ -f CHANGELOG.md ]; then
+            NOTES="$(awk -v ver="${VERSION_NO_V}" '
+              $0 ~ "^## \\[" ver "\\]" {found=1; next}
+              $0 ~ "^## \\[" {if (found) exit}
+              found {print}
+            ' CHANGELOG.md)"
+          else
+            NOTES=""
+          fi
+          if [ -z "${NOTES}" ]; then
+            NOTES="- No changelog entry found for ${VERSION_NO_V}."
+          fi
+          cat <<EOF > release_body.md
+          ## 🎉 Inventory Manager ${CURRENT_TAG}
+          
+          A modern, cross-platform inventory management application built with Rust & Iced.
+          
+          ### 📦 Downloads
+          
+          Choose the appropriate file for your operating system:
+          
+          - **macOS** (11.0+): 
+            - \`*x86_64*.dmg\` - For Intel Macs
+            - \`*aarch64*.dmg\` - For Apple Silicon (M1/M2/M3/M4)
+            - Not sure? Run \`uname -m\` in Terminal (x86_64 = Intel, arm64 = Apple Silicon)
+          - **Windows** (10+): \`*.exe\` or \`*.msi\` - Run the installer
+          - **Linux**: 
+            - \`*.deb\` - For Debian/Ubuntu: \`sudo dpkg -i inventory_app*.deb\`
+            - \`*.AppImage\` - For any distro: \`chmod +x inventory_app*.AppImage && ./inventory_app*.AppImage\`
+          
+          ### ✨ Features
+          
+          - 📊 Complete inventory tracking
+          - 👥 User management with role-based access
+          - 🔔 Low stock alerts
+          - 📝 Built-in note editor
+          - 🔍 Advanced search and filtering
+          - 🧮 Integrated calculator
+          - 📋 Audit logging
+          - 🔄 Auto-update notifications
+          - 🎨 Dark/Light theme support
+          
+          ### 🔐 Security Note
+          
+          **First-time users:** Your operating system may show a security warning because this app is not code-signed. This is expected for open-source releases.
+          
+          - **Windows**: Click "More info" → "Run anyway"
+          - **macOS**: Right-click → Open → Confirm
+          - **Linux**: No issues (unless using AppImage, then make it executable first)
+          
+          ### 📝 What's New
+          
+          ${NOTES}
+          
+          ### 🐛 Bug Reports
+          
+          Found an issue? [Open a bug report](https://github.com/ojutalayomi/inventory_app/issues/new)
+          EOF
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -135,51 +201,7 @@ jobs:
           draft: false
           prerelease: false
           files: ./artifacts/**/*
-          body: |
-            ## 🎉 Inventory Manager ${{ steps.version.outputs.VERSION }}
-            
-            A modern, cross-platform inventory management application built with Rust & Iced.
-            
-            ### 📦 Downloads
-            
-            Choose the appropriate file for your operating system:
-            
-            - **macOS** (11.0+): 
-              - `*x86_64*.dmg` - For Intel Macs
-              - `*aarch64*.dmg` - For Apple Silicon (M1/M2/M3/M4)
-              - Not sure? Run `uname -m` in Terminal (x86_64 = Intel, arm64 = Apple Silicon)
-            - **Windows** (10+): `*.exe` or `*.msi` - Run the installer
-            - **Linux**: 
-              - `*.deb` - For Debian/Ubuntu: `sudo dpkg -i inventory_app*.deb`
-              - `*.AppImage` - For any distro: `chmod +x inventory_app*.AppImage && ./inventory_app*.AppImage`
-            
-            ### ✨ Features
-            
-            - 📊 Complete inventory tracking
-            - 👥 User management with role-based access
-            - 🔔 Low stock alerts
-            - 📝 Built-in note editor
-            - 🔍 Advanced search and filtering
-            - 🧮 Integrated calculator
-            - 📋 Audit logging
-            - 🔄 Auto-update notifications
-            - 🎨 Dark/Light theme support
-            
-            ### 🔐 Security Note
-            
-            **First-time users:** Your operating system may show a security warning because this app is not code-signed. This is expected for open-source releases.
-            
-            - **Windows**: Click "More info" → "Run anyway"
-            - **macOS**: Right-click → Open → Confirm
-            - **Linux**: No issues (unless using AppImage, then make it executable first)
-            
-            ### 📝 What's New
-            
-            See the [commit history](https://github.com/ojutalayomi/inventory_app/commits/${{ steps.version.outputs.VERSION }}) for detailed changes.
-            
-            ### 🐛 Bug Reports
-            
-            Found an issue? [Open a bug report](https://github.com/ojutalayomi/inventory_app/issues/new)
+          body_path: release_body.md
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 

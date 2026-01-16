@@ -25,7 +25,7 @@ impl InventoryApp {
     pub fn handle_alert_low_stock_threshold_changed(&mut self, value: String) -> Task<Message> {
         if let Ok(threshold) = value.parse::<u32>() {
             self.alert_manager.settings_mut().low_stock_threshold = threshold;
-            self.alert_manager.update_from_inventory(&self.items);
+            self.update_alerts_from_inventory();
             return self.auto_save();
         }
         Task::none()
@@ -34,7 +34,7 @@ impl InventoryApp {
     pub fn handle_alert_critical_threshold_changed(&mut self, value: String) -> Task<Message> {
         if let Ok(threshold) = value.parse::<u32>() {
             self.alert_manager.settings_mut().critically_low_threshold = threshold;
-            self.alert_manager.update_from_inventory(&self.items);
+            self.update_alerts_from_inventory();
             return self.auto_save();
         }
         Task::none()
@@ -42,7 +42,7 @@ impl InventoryApp {
 
     pub fn handle_toggle_alerts_enabled(&mut self) -> Task<Message> {
         self.alert_manager.settings_mut().enabled = !self.alert_manager.settings().enabled;
-        self.alert_manager.update_from_inventory(&self.items);
+        self.update_alerts_from_inventory();
         self.auto_save()
     }
 
@@ -52,7 +52,7 @@ impl InventoryApp {
     }
 
     pub fn handle_update_alert_settings(&mut self) -> Task<Message> {
-        self.alert_manager.update_from_inventory(&self.items);
+        self.update_alerts_from_inventory();
         self.auto_save()
     }
 }

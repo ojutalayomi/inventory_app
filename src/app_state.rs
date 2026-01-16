@@ -1,7 +1,9 @@
 use iced::keyboard::{self, Key};
 use iced::mouse;
-use iced::widget::text_editor;
+use iced::widget::{markdown, text_editor};
 use iced::{Element, Subscription, Task};
+use std::collections::HashMap;
+use std::time::{Duration, Instant};
 
 use crate::alerts::AlertManager;
 use crate::audit::AuditLog;
@@ -33,6 +35,7 @@ pub struct InventoryApp {
     pub username_input: String,
     pub password_input: String,
     pub login_error: Option<String>,
+    pub logging_in: bool,
     
     // User management state
     pub new_username_input: String,
@@ -46,6 +49,7 @@ pub struct InventoryApp {
     // Alert system state
     pub alert_manager: AlertManager,
     pub show_alerts_panel: bool,
+    pub notification_timestamps: HashMap<String, Instant>,
 
     // Inventory state
     pub items: Vec<InventoryItem>,
@@ -79,12 +83,14 @@ pub struct InventoryApp {
     pub settings: AppSettings,
     pub settings_interval_input: String,
     pub settings_category_input: String,
+    pub settings_notification_throttle_input: String,
     pub import_file_picker_open: bool,
     pub import_error: Option<String>,
 
     // Update state
     pub update_checker: update_checker::UpdateChecker,
     pub latest_version: Option<update_checker::UpdateInfo>,
+    pub update_release_notes_items: Option<Vec<markdown::Item>>,
     pub show_update_notification: bool,
     pub update_download_progress: Option<f32>,
     pub checking_for_updates: bool,
@@ -117,6 +123,7 @@ impl InventoryApp {
                 username_input: String::new(),
                 password_input: String::new(),
                 login_error: None,
+                logging_in: false,
                 new_username_input: String::new(),
                 new_password_input: String::new(),
                 new_role_input: None,
@@ -124,6 +131,7 @@ impl InventoryApp {
                 audit_log: AuditLog::new(),
                 alert_manager: AlertManager::new(),
                 show_alerts_panel: false,
+                notification_timestamps: HashMap::new(),
                 items: Vec::new(),
                 filtered_items: Vec::new(),
                 item_dialog_mode: None,
@@ -147,6 +155,7 @@ impl InventoryApp {
                 settings: AppSettings::default(),
                 settings_interval_input: String::from("5"),
                 settings_category_input: String::from("General"),
+                settings_notification_throttle_input: String::from("30"),
                 import_file_picker_open: false,
                 import_error: None,
                 update_checker: update_checker::UpdateChecker::new(
@@ -154,6 +163,7 @@ impl InventoryApp {
                     "inventory_app".to_string(),
                 ),
                 latest_version: None,
+                update_release_notes_items: None,
                 show_update_notification: false,
                 update_download_progress: None,
                 checking_for_updates: false,
@@ -390,6 +400,11 @@ impl InventoryApp {
             Message::ThemeChanged(theme) => self.handle_theme_changed(theme),
             Message::ToggleLoadingScreen => self.handle_toggle_loading_screen(),
             Message::LayoutStyleChanged(style) => self.handle_layout_style_changed(style),
+            Message::ToggleDeviceNotifications => self.handle_toggle_device_notifications(),
+            Message::ToggleUpdateNotifications => self.handle_toggle_update_notifications(),
+            Message::NotificationThrottleChanged(value) => {
+                self.handle_notification_throttle_changed(value)
+            }
             Message::ToggleSidebar => {
                 self.sidebar_collapsed = !self.sidebar_collapsed;
                 self.auto_save()
@@ -434,7 +449,7 @@ impl InventoryApp {
         self.items = state.items;
         self.filtered_items = self.search_filter.apply(&self.items);
         self.alert_manager = state.alert_manager;
-        self.alert_manager.update_from_inventory(&self.items);
+        let _ = self.alert_manager.update_from_inventory(&self.items);
         self.notes = state.notes;
         self.settings = state.settings;
         self.auth_store = state.auth_store;
@@ -448,6 +463,8 @@ impl InventoryApp {
         self.current_view = state.current_view;
         self.settings_interval_input = self.settings.auto_save_interval.to_string();
         self.settings_category_input = self.settings.default_category.clone();
+        self.settings_notification_throttle_input =
+            self.settings.notification_throttle_seconds.to_string();
         if let Some(pos) = state.calculator_position {
             self.calculator.set_position(pos.0, pos.1);
         }
@@ -578,6 +595,7 @@ impl InventoryApp {
                 &self.password_input,
                 self.login_error.as_deref(),
                 &self.settings.theme,
+                self.logging_in,
             ),
             AppState::Loaded => {
                 let main_content = self.view_loaded();
@@ -611,7 +629,11 @@ impl InventoryApp {
 
                 if self.show_update_notification && self.latest_version.is_some() {
                     let update_info = self.latest_version.as_ref().unwrap();
-                    stack.push(crate::views::dialogs::view_update_notification(update_info, &self.settings.theme));
+                    stack.push(crate::views::dialogs::view_update_notification(
+                        update_info,
+                        self.update_release_notes_items.as_deref(),
+                        &self.settings.theme,
+                    ));
                 }
 
                 if stack.len() == 1 {
@@ -625,6 +647,54 @@ impl InventoryApp {
 
     fn delay(seconds: u64) {
         std::thread::sleep(std::time::Duration::from_secs(seconds));
+    }
+
+    pub(crate) fn update_alerts_from_inventory(&mut self) {
+        let new_alerts = self.alert_manager.update_from_inventory(&self.items);
+        self.notify_new_alerts(&new_alerts);
+    }
+
+    pub(crate) fn maybe_send_device_notification(
+        &mut self,
+        key: &str,
+        title: &str,
+        body: &str,
+    ) {
+        let throttle_seconds = self
+            .settings
+            .notification_throttle_seconds
+            .max(1)
+            .min(86_400);
+        let throttle_window = Duration::from_secs(throttle_seconds as u64);
+        let now = Instant::now();
+
+        if let Some(last_sent) = self.notification_timestamps.get(key) {
+            if now.duration_since(*last_sent) < throttle_window {
+                return;
+            }
+        }
+
+        self.notification_timestamps
+            .insert(key.to_string(), now);
+        crate::notifications::send_notification(title, body);
+    }
+
+    fn notify_new_alerts(&mut self, alerts: &[crate::alerts::StockAlert]) {
+        if !self.settings.device_notifications_enabled
+            || !self.alert_manager.settings().show_notifications
+        {
+            return;
+        }
+
+        for alert in alerts {
+            let key = format!("alert:{}", alert.id);
+            let title = format!("{}: {}", alert.alert_type, alert.item_name);
+            let body = format!(
+                "SKU: {} | Qty: {}",
+                alert.item_sku, alert.current_quantity
+            );
+            self.maybe_send_device_notification(&key, &title, &body);
+        }
     }
 }
 

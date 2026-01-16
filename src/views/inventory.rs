@@ -238,6 +238,7 @@ fn make_stat_card(
     )
     .padding(theme::SPACING_XL)
     .width(Length::Fill)
+    .height(Length::Shrink)
     .style(move |_theme: &iced::Theme| container::Style {
         background: Some(iced::Background::Color(theme::surface_color(app_theme))),
         border: iced::Border {
@@ -763,6 +764,7 @@ fn build_item_card<'a>(item: &'a InventoryItem, app_theme: &'a AppTheme) -> Elem
             .padding(theme::SPACING_XL)
             .width(Length::Fill),
         ]
+        .height(Length::Shrink)
     )
     .width(Length::Fill)
     .style(move |_theme: &iced::Theme| container::Style {

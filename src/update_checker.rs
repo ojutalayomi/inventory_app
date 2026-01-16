@@ -80,10 +80,7 @@ impl UpdateChecker {
         if latest > current {
             // Find the appropriate asset for the current platform
             let platform = get_platform_identifier();
-            let asset = release
-                .assets
-                .iter()
-                .find(|a| a.name.contains(&platform))
+            let asset = find_platform_asset(&release.assets, &platform)
                 .ok_or_else(|| {
                     format!("No release asset found for platform: {}", platform)
                 })?;
@@ -153,6 +150,48 @@ fn get_platform_identifier() -> String {
         other => other,
     }
     .to_string()
+}
+
+fn find_platform_asset<'a>(assets: &'a [GitHubAsset], platform: &str) -> Option<&'a GitHubAsset> {
+    match platform {
+        "macos" => {
+            // macOS assets are .dmg files
+            // Prefer architecture-specific matches, then fall back to any .dmg
+            let arch = std::env::consts::ARCH;
+            let preferred_arch = match arch {
+                "aarch64" | "arm64" => "aarch64",
+                "x86_64" => "x64",
+                _ => arch,
+            };
+            
+            // Try to find architecture-specific .dmg first
+            if let Some(asset) = assets.iter().find(|a| {
+                a.name.ends_with(".dmg") && 
+                (a.name.contains(preferred_arch) || a.name.contains("arm64"))
+            }) {
+                return Some(asset);
+            }
+            
+            // Fall back to any .dmg file
+            assets.iter().find(|a| a.name.ends_with(".dmg"))
+        }
+        "windows" => {
+            // Windows assets are .exe or .msi files
+            assets.iter().find(|a| a.name.ends_with(".exe") || a.name.ends_with(".msi"))
+        }
+        "linux" => {
+            // Linux assets are .deb, .rpm, or .AppImage files
+            assets.iter().find(|a| {
+                a.name.ends_with(".deb") || 
+                a.name.ends_with(".rpm") || 
+                a.name.ends_with(".AppImage")
+            })
+        }
+        _ => {
+            // Fallback: try to find asset containing platform name
+            assets.iter().find(|a| a.name.to_lowercase().contains(&platform.to_lowercase()))
+        }
+    }
 }
 
 #[cfg(test)]

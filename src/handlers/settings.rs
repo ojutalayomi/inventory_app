@@ -1,4 +1,5 @@
 use iced::Task;
+use iced::widget::markdown;
 use std::collections::HashSet;
 use crate::{InventoryApp, Message};
 use crate::messages::{AppTheme, LayoutStyle, SavedState};
@@ -40,6 +41,27 @@ impl InventoryApp {
     pub fn handle_layout_style_changed(&mut self, style: LayoutStyle) -> Task<Message> {
         self.settings.layout_style = style;
         self.auto_save()
+    }
+
+    pub fn handle_toggle_device_notifications(&mut self) -> Task<Message> {
+        self.settings.device_notifications_enabled = !self.settings.device_notifications_enabled;
+        self.auto_save()
+    }
+
+    pub fn handle_toggle_update_notifications(&mut self) -> Task<Message> {
+        self.settings.update_notifications_enabled = !self.settings.update_notifications_enabled;
+        self.auto_save()
+    }
+
+    pub fn handle_notification_throttle_changed(&mut self, value: String) -> Task<Message> {
+        self.settings_notification_throttle_input = value.clone();
+        if let Ok(seconds) = value.parse::<u32>() {
+            if seconds >= 1 && seconds <= 86_400 {
+                self.settings.notification_throttle_seconds = seconds;
+                return self.auto_save();
+            }
+        }
+        Task::none()
     }
 
     pub fn handle_export_data(&mut self) -> Task<Message> {
@@ -237,7 +259,7 @@ impl InventoryApp {
         
         // Alert manager: Replace settings, then regenerate alerts from merged inventory
         *self.alert_manager.settings_mut() = imported_state.alert_manager.settings().clone();
-        self.alert_manager.update_from_inventory(&self.items);
+        self.update_alerts_from_inventory();
         
         // UI state: Keep current state (don't import UI preferences)
         // self.sidebar_collapsed stays as is
@@ -248,6 +270,8 @@ impl InventoryApp {
         // Update settings inputs
         self.settings_interval_input = self.settings.auto_save_interval.to_string();
         self.settings_category_input = self.settings.default_category.clone();
+        self.settings_notification_throttle_input =
+            self.settings.notification_throttle_seconds.to_string();
         
         // Update calculator position if present
         if let Some(pos) = imported_state.calculator_position {
@@ -347,19 +371,36 @@ impl InventoryApp {
         self.checking_for_updates = false;
         match result {
             Ok(Some(update_info)) => {
+                let release_notes_slice = if update_info.release_notes.len() > 2000 {
+                    &update_info.release_notes[..2000]
+                } else {
+                    &update_info.release_notes
+                };
+                self.update_release_notes_items =
+                    Some(markdown::parse(release_notes_slice).collect::<Vec<_>>());
                 let version = update_info.version.clone();
                 self.latest_version = Some(update_info);
                 self.show_update_notification = true;
                 self.update_message = Some(format!("Update available: v{}", version));
+                if self.settings.device_notifications_enabled
+                    && self.settings.update_notifications_enabled
+                {
+                    let title = "Update Available";
+                    let body = format!("Version {} is ready to download.", version);
+                    let key = format!("update:{}", version);
+                    self.maybe_send_device_notification(&key, title, &body);
+                }
             }
             Ok(None) => {
                 // No update available
                 self.latest_version = None;
+                self.update_release_notes_items = None;
                 self.update_message = Some("You are running the latest version.".to_string());
             }
             Err(e) => {
                 eprintln!("Update check failed: {}", e);
                 self.latest_version = None;
+                self.update_release_notes_items = None;
                 self.update_message = Some(format!("Failed to check for updates: {}", e));
             }
         }
