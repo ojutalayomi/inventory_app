@@ -18,3 +18,4 @@ WARP.md
 .env*
 !.env.example
 .cursor/debug.log
+.cursor/rules
