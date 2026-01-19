@@ -1,9 +1,10 @@
 use iced::{Element, Length};
-use iced::widget::{button, checkbox, column, container, row, scrollable, text, text_input};
+use iced::widget::{button, checkbox, column, container, pick_list, row, scrollable, text, text_input};
 
 use crate::messages::{AppSettings, AppTheme, LayoutStyle, Message};
 use crate::theme;
 use crate::icons;
+use crate::currency;
 
 pub fn view<'a>(
     settings: &'a AppSettings,
@@ -18,6 +19,11 @@ pub fn view<'a>(
     theme: &'a crate::messages::AppTheme,
 ) -> Element<'a, Message> {
     let title = text("Settings").size(32);
+    let currency_options = currency::options();
+    let selected_currency = currency_options
+        .iter()
+        .find(|option| option.code == settings.preferred_currency)
+        .copied();
 
     let auto_save_section = column![
         text("Auto-Save").size(20).style(move |_iced_theme: &iced::Theme| {
@@ -59,6 +65,17 @@ pub fn view<'a>(
                 .on_input(Message::DefaultCategoryChanged)
                 .width(200)
                 .padding(5),
+        ]
+        .spacing(10)
+        .align_y(iced::Alignment::Center),
+        row![
+            text("Currency:").size(14),
+            pick_list(
+                currency_options,
+                selected_currency,
+                |option| Message::CurrencyChanged(option.code.to_string())
+            )
+            .width(260)
         ]
         .spacing(10)
         .align_y(iced::Alignment::Center),

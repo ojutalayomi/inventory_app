@@ -2044,6 +2044,7 @@ dependencies = [
  "chrono",
  "directories",
  "iced",
+ "iso4217",
  "mac-notification-sys",
  "notify-rust",
  "open",
@@ -2082,6 +2083,12 @@ dependencies = [
  "is-docker",
  "once_cell",
 ]
+
+[[package]]
+name = "iso4217"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a0ea2a998704e0177b5e9cbd428f2f01cbed6c56d9de68d4d3743e10bc82230"
 
 [[package]]
 name = "itoa"

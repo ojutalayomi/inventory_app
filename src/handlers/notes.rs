@@ -1,8 +1,9 @@
 use iced::Task;
 use iced::widget::text_editor;
 use crate::{InventoryApp, Message};
-use crate::note::Note;
+use crate::messages::NoteExportFormat;
 use crate::audit::{AuditAction, AuditEntry};
+use crate::note::Note;
 
 impl InventoryApp {
     pub fn handle_create_note(&mut self) -> Task<Message> {
@@ -108,6 +109,72 @@ impl InventoryApp {
 
     pub fn handle_close_delete_confirm(&mut self) {
         self.delete_note_confirm = None;
+    }
+
+    pub fn handle_export_note(&mut self, format: NoteExportFormat) -> Task<Message> {
+        let note = match self.selected_note_id.as_ref() {
+            Some(note_id) => self.notes.iter().find(|note| &note.id == note_id).cloned(),
+            None => None,
+        };
+
+        let Some(note) = note else {
+            return Task::none();
+        };
+
+        if let Some(session) = &self.session {
+            let audit_entry = AuditEntry::new(
+                session.user_id.clone(),
+                session.username.clone(),
+                AuditAction::DataExported,
+                "note".to_string(),
+                Some(note.id.clone()),
+                format!("Exported note: {}", note.title),
+            );
+            self.audit_log.add_entry(audit_entry);
+        }
+
+        let task = Task::perform(
+            async move {
+                let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+                let safe_title = sanitize_filename(&note.title);
+                let (extension, content) = match format {
+                    NoteExportFormat::Txt => ("txt", format!("{}\n\n{}", note.title, note.content)),
+                    NoteExportFormat::Markdown => ("md", format!("# {}\n\n{}", note.title, note.content)),
+                };
+                let filename = format!("note_{}_{}.{}", safe_title, timestamp, extension);
+
+                let file_path = rfd::FileDialog::new()
+                    .set_file_name(&filename)
+                    .add_filter("Text", &["txt"])
+                    .add_filter("Markdown", &["md"])
+                    .save_file();
+
+                let Some(file_path) = file_path else {
+                    return;
+                };
+
+                std::fs::write(file_path, content).ok();
+            },
+            |_| Message::Save,
+        );
+
+        Task::batch(vec![self.auto_save(), task])
+    }
+}
+
+fn sanitize_filename(value: &str) -> String {
+    let mut sanitized = String::new();
+    for ch in value.chars() {
+        if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+            sanitized.push(ch);
+        } else if ch.is_whitespace() {
+            sanitized.push('_');
+        }
+    }
+    if sanitized.is_empty() {
+        "note".to_string()
+    } else {
+        sanitized
     }
 }
 

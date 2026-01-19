@@ -1,3 +1,8 @@
+#![cfg_attr(
+    all(target_os = "windows", not(debug_assertions)),
+    windows_subsystem = "windows"
+)]
+
 use iced::window;
 
 mod alerts;
@@ -6,6 +11,7 @@ mod audit;
 mod auth;
 mod calculator;
 mod calculator_window;
+mod currency;
 mod errors;
 mod handlers;
 mod icon;

@@ -2,16 +2,19 @@ use iced::widget::{button, column, container, pick_list, row, scrollable, text, 
 use iced::{Color, Element, Length};
 
 use crate::inventory::InventoryItem;
-use crate::messages::{AppTheme, Message};
+use crate::messages::{AppTheme, InventoryViewMode, Message};
 use crate::search::{SearchFilter, SortField};
 use crate::theme;
 use crate::icons;
+use crate::currency;
 
 pub fn view<'a>(
     items: &'a [InventoryItem],
     all_items: &'a [InventoryItem],
     filter: &'a SearchFilter,
     show_search_panel: bool,
+    currency_code: &'a str,
+    view_mode: InventoryViewMode,
     app_theme: &'a AppTheme,
 ) -> Element<'a, Message> {
     // Calculate statistics
@@ -110,10 +113,68 @@ pub fn view<'a>(
             }
         });
 
+    let make_view_button = |label: &'a str, mode: InventoryViewMode| {
+        let is_active = view_mode == mode;
+        button(text(label).size(theme::TEXT_BODY))
+            .on_press(Message::InventoryViewModeChanged(mode))
+            .padding([theme::SPACING_MD, theme::SPACING_LG])
+            .style(move |_theme: &iced::Theme, _status: button::Status| {
+                let bg_color = if is_active {
+                    theme::primary_color(app_theme)
+                } else {
+                    theme::surface_elevated_color(app_theme)
+                };
+                button::Style {
+                    background: Some(iced::Background::Color(bg_color)),
+                    text_color: if is_active { Color::WHITE } else { theme::text_color(app_theme) },
+                    border: iced::Border {
+                        color: if is_active { theme::primary_color(app_theme) } else { theme::border_color(app_theme) },
+                        width: 1.0,
+                        radius: theme::RADIUS_MD.into(),
+                    },
+                    ..Default::default()
+                }
+            })
+    };
+
+    let export_button = button(
+        row![
+            icons::Icon::Save.view(icons::IconSize::Small, app_theme),
+            text("Export CSV").size(theme::TEXT_BODY),
+        ]
+        .spacing(theme::SPACING_SM)
+        .align_y(iced::Alignment::Center),
+    )
+    .on_press(Message::ExportInventoryCsv)
+    .padding([theme::SPACING_MD, theme::SPACING_XL])
+    .style(move |_theme: &iced::Theme, status: button::Status| {
+        let bg_color = match status {
+            button::Status::Hovered => theme::surface_color(app_theme),
+            _ => theme::surface_elevated_color(app_theme),
+        };
+        button::Style {
+            background: Some(iced::Background::Color(bg_color)),
+            text_color: theme::text_color(app_theme),
+            border: iced::Border {
+                color: theme::border_color(app_theme),
+                width: 1.0,
+                    radius: theme::RADIUS_MD.into(),
+                },
+                ..Default::default()
+            }
+        });
+
     let header = row![
         title,
         iced::widget::horizontal_space(),
-        row![search_button, add_button].spacing(theme::SPACING_MD)
+        row![
+            export_button,
+            make_view_button("Cards", InventoryViewMode::Cards),
+            make_view_button("Table", InventoryViewMode::Table),
+            search_button,
+            add_button
+        ]
+        .spacing(theme::SPACING_MD)
     ]
     .spacing(theme::SPACING_XL)
     .align_y(iced::Alignment::Center)
@@ -130,7 +191,7 @@ pub fn view<'a>(
         make_stat_card(
             icons::Icon::Dollar,
             "Total Value".to_string(),
-            format!("${:.2}", total_value),
+            currency::format_currency_with_exp(total_value, currency_code),
             "Filtered items".to_string(),
             app_theme,
         ),
@@ -184,14 +245,23 @@ pub fn view<'a>(
             .center_x(Length::Fill)
         );
     } else {
-        let mut items_list = Column::new().spacing(theme::SPACING_LG).padding([0.0, theme::SPACING_LG]);
+        match view_mode {
+            InventoryViewMode::Cards => {
+                let mut items_list =
+                    Column::new().spacing(theme::SPACING_LG).padding([0.0, theme::SPACING_LG]);
 
         for item in items {
-            let item_card = build_item_card(item, app_theme);
+                    let item_card = build_item_card(item, currency_code, app_theme);
             items_list = items_list.push(item_card);
         }
 
         content = content.push(items_list);
+            }
+            InventoryViewMode::Table => {
+                let table_view = build_table_view(items, currency_code, app_theme);
+                content = content.push(table_view);
+            }
+        }
     }
 
     // Make the entire page scrollable
@@ -517,7 +587,87 @@ fn build_search_panel<'a>(
     panel.into()
 }
 
-fn build_item_card<'a>(item: &'a InventoryItem, app_theme: &'a AppTheme) -> Element<'a, Message> {
+fn build_table_view<'a>(
+    items: &'a [InventoryItem],
+    currency_code: &'a str,
+    app_theme: &'a AppTheme,
+) -> Element<'a, Message> {
+    let header_row = container(
+        row![
+            text("Name").width(Length::FillPortion(3)),
+            text("SKU").width(Length::FillPortion(2)),
+            text("Category").width(Length::FillPortion(2)),
+            text("Supplier").width(Length::FillPortion(2)),
+            text("Qty").width(Length::FillPortion(1)),
+            text("Price").width(Length::FillPortion(2)),
+            text("Actions").width(Length::FillPortion(2)),
+        ]
+        .spacing(10)
+        .padding(10),
+    )
+    .style(move |_iced_theme: &iced::Theme| container::Style {
+        background: Some(iced::Background::Color(theme::surface_elevated_color(app_theme))),
+        border: iced::Border {
+            color: theme::border_color(app_theme),
+            width: 1.0,
+            radius: theme::RADIUS_MD.into(),
+        },
+        ..Default::default()
+    });
+
+    let mut rows = column![header_row].spacing(theme::SPACING_SM);
+
+    for item in items {
+        let edit_button = button(
+            icons::Icon::Edit.view(icons::IconSize::Small, app_theme)
+        )
+        .on_press(Message::OpenEditDialog(item.id.clone()))
+        .padding(6);
+
+        let delete_button = button(
+            icons::Icon::Delete.view(icons::IconSize::Small, app_theme)
+        )
+        .on_press(Message::DeleteItem(item.id.clone()))
+        .padding(6);
+
+        let row_content = row![
+            text(&item.name).width(Length::FillPortion(3)),
+            text(&item.sku).width(Length::FillPortion(2)),
+            text(&item.category).width(Length::FillPortion(2)),
+            text(&item.supplier).width(Length::FillPortion(2)),
+            text(format!("{}", item.quantity)).width(Length::FillPortion(1)),
+            text(currency::format_currency_with_exp(item.price, currency_code))
+                .width(Length::FillPortion(2)),
+            row![edit_button, delete_button]
+                .spacing(theme::SPACING_SM)
+                .width(Length::FillPortion(2)),
+        ]
+        .spacing(10)
+        .align_y(iced::Alignment::Center);
+
+        let row_container = container(row_content)
+            .padding(10)
+            .style(move |_iced_theme: &iced::Theme| container::Style {
+                background: Some(iced::Background::Color(theme::surface_color(app_theme))),
+                border: iced::Border {
+                    color: theme::border_color(app_theme),
+                    width: 1.0,
+                    radius: theme::RADIUS_MD.into(),
+                },
+                ..Default::default()
+            });
+
+        rows = rows.push(row_container);
+    }
+
+    rows.padding([0.0, theme::SPACING_LG]).into()
+}
+
+fn build_item_card<'a>(
+    item: &'a InventoryItem,
+    currency_code: &'a str,
+    app_theme: &'a AppTheme,
+) -> Element<'a, Message> {
     let created = chrono::DateTime::from_timestamp(item.created_at, 0)
         .map(|dt| dt.format("%b %d, %Y").to_string())
         .unwrap_or_else(|| "Unknown".to_string());
@@ -702,7 +852,7 @@ fn build_item_card<'a>(item: &'a InventoryItem, app_theme: &'a AppTheme) -> Elem
                             .style(move |_theme: &iced::Theme| text::Style {
                                 color: Some(theme::text_tertiary_color(app_theme)),
                             }),
-                        text(format!("${:.2}", item.price))
+                        text(currency::format_currency_with_exp(item.price, currency_code))
                             .size(theme::TEXT_H3)
                             .style(move |_theme: &iced::Theme| text::Style {
                                 color: Some(theme::primary_color(app_theme)),

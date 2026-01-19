@@ -326,6 +326,10 @@ impl InventoryApp {
             }
             Message::SubmitItem => self.handle_submit_item(),
             Message::DeleteItem(item_id) => self.handle_delete_item(item_id),
+            Message::ExportInventoryCsv => self.handle_export_inventory_csv(),
+            Message::InventoryViewModeChanged(mode) => {
+                self.handle_inventory_view_mode_changed(mode)
+            }
 
             // Notes Messages
             Message::CreateNote => self.handle_create_note(),
@@ -344,6 +348,7 @@ impl InventoryApp {
                 self.handle_close_delete_confirm();
                 Task::none()
             }
+            Message::ExportNote(format) => self.handle_export_note(format),
 
             // Calculator Messages
             Message::ToggleCalculator => {
@@ -397,6 +402,7 @@ impl InventoryApp {
             Message::ToggleAutoSave => self.handle_toggle_auto_save(),
             Message::AutoSaveIntervalChanged(value) => self.handle_auto_save_interval_changed(value),
             Message::DefaultCategoryChanged(value) => self.handle_default_category_changed(value),
+            Message::CurrencyChanged(value) => self.handle_currency_changed(value),
             Message::ThemeChanged(theme) => self.handle_theme_changed(theme),
             Message::ToggleLoadingScreen => self.handle_toggle_loading_screen(),
             Message::LayoutStyleChanged(style) => self.handle_layout_style_changed(style),

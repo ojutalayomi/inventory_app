@@ -4,7 +4,7 @@ use iced::widget::{
 };
 use iced::{Element, Length};
 
-use crate::messages::Message;
+use crate::messages::{Message, NoteExportFormat};
 use crate::note::Note;
 
 pub fn view<'a>(
@@ -139,6 +139,22 @@ pub fn view<'a>(
             ..Default::default()
         });
 
+    let export_txt_button = if selected_note_id.is_some() {
+        button("Download TXT")
+            .on_press(Message::ExportNote(NoteExportFormat::Txt))
+            .padding(8)
+    } else {
+        button("Download TXT").padding(8)
+    };
+
+    let export_md_button = if selected_note_id.is_some() {
+        button("Download Markdown")
+            .on_press(Message::ExportNote(NoteExportFormat::Markdown))
+            .padding(8)
+    } else {
+        button("Download Markdown").padding(8)
+    };
+
     let main_area = container(
         column![
             row![
@@ -147,6 +163,8 @@ pub fn view<'a>(
                     .on_input(Message::UpdateNoteTitle)
                     .padding(8),
                 button("New Note").on_press(Message::CreateNote).padding(8),
+                export_txt_button,
+                export_md_button,
                 if let Some(note_id) = selected_note_id {
                     button("Delete Note")
                         .on_press(Message::DeleteNote(note_id.clone()))

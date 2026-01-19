@@ -3,6 +3,7 @@ use crate::{InventoryApp, Message};
 use crate::messages::ItemDialogMode;
 use crate::inventory::InventoryItem;
 use crate::audit::{AuditAction, AuditEntry};
+use crate::currency;
 
 impl InventoryApp {
     pub fn handle_open_add_dialog(&mut self) {
@@ -164,8 +165,11 @@ impl InventoryApp {
             Some(ItemDialogMode::Edit(item_id)) => {
                 if let Some(item) = self.items.iter_mut().find(|i| i.id == *item_id) {
                     let old_values = format!(
-                        "{} | {} | Qty: {} | ${:.2}",
-                        item.name, item.sku, item.quantity, item.price
+                        "{} | {} | Qty: {} | {}",
+                        item.name,
+                        item.sku,
+                        item.quantity,
+                        currency::format_currency_with_exp(item.price, &self.settings.preferred_currency)
                     );
                     
                     item.name = self.name_input.clone();
@@ -178,8 +182,11 @@ impl InventoryApp {
                     item.update_timestamp();
                     
                     let new_values = format!(
-                        "{} | {} | Qty: {} | ${:.2}",
-                        item.name, item.sku, item.quantity, item.price
+                        "{} | {} | Qty: {} | {}",
+                        item.name,
+                        item.sku,
+                        item.quantity,
+                        currency::format_currency_with_exp(item.price, &self.settings.preferred_currency)
                     );
                     
                     // Log item update
@@ -241,6 +248,85 @@ impl InventoryApp {
             }
         }
         Task::none()
+    }
+
+    pub fn handle_export_inventory_csv(&mut self) -> Task<Message> {
+        let items = self.filtered_items.clone();
+        let currency_code = self.settings.preferred_currency.clone();
+
+        if let Some(session) = &self.session {
+            let audit_entry = AuditEntry::new(
+                session.user_id.clone(),
+                session.username.clone(),
+                AuditAction::DataExported,
+                "inventory".to_string(),
+                None,
+                format!("Exported inventory list ({} items) to CSV", items.len()),
+            );
+            self.audit_log.add_entry(audit_entry);
+        }
+
+        let task = Task::perform(
+            async move {
+                let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+                let filename = format!("inventory_list_{}.csv", timestamp);
+                let file_path = rfd::FileDialog::new()
+                    .set_file_name(&filename)
+                    .add_filter("CSV", &["csv"])
+                    .save_file();
+
+                let Some(file_path) = file_path else {
+                    return;
+                };
+
+                let mut csv = String::new();
+                let header = format!(
+                    "Name,SKU,Category,Supplier,Description,Quantity,Price ({currency}),Total Value ({currency}),Created At,Updated At\n",
+                    currency = currency_code
+                );
+                csv.push_str(&header);
+
+                for item in items {
+                    let price = currency::format_amount(item.price, &currency_code);
+                    let total = currency::format_amount(item.total_value(), &currency_code);
+                    let created_at = chrono::DateTime::from_timestamp(item.created_at, 0)
+                        .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
+                        .unwrap_or_else(|| "Unknown".to_string());
+                    let updated_at = chrono::DateTime::from_timestamp(item.updated_at, 0)
+                        .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
+                        .unwrap_or_else(|| "Unknown".to_string());
+
+                    let row = format!(
+                        "{},{},{},{},{},{},{},{},{},{}\n",
+                        csv_escape(&item.name),
+                        csv_escape(&item.sku),
+                        csv_escape(&item.category),
+                        csv_escape(&item.supplier),
+                        csv_escape(&item.description),
+                        item.quantity,
+                        csv_escape(&price),
+                        csv_escape(&total),
+                        csv_escape(&created_at),
+                        csv_escape(&updated_at),
+                    );
+                    csv.push_str(&row);
+                }
+
+                std::fs::write(file_path, csv).ok();
+            },
+            |_| Message::Save,
+        );
+
+        Task::batch(vec![self.auto_save(), task])
+    }
+}
+
+fn csv_escape(value: &str) -> String {
+    if value.contains(',') || value.contains('"') || value.contains('\n') || value.contains('\r') {
+        let escaped = value.replace('"', "\"\"");
+        format!("\"{}\"", escaped)
+    } else {
+        value.to_string()
     }
 }
 

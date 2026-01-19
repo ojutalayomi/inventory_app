@@ -28,6 +28,11 @@ impl InventoryApp {
         self.auto_save()
     }
 
+    pub fn handle_currency_changed(&mut self, value: String) -> Task<Message> {
+        self.settings.preferred_currency = value;
+        self.auto_save()
+    }
+
     pub fn handle_theme_changed(&mut self, theme: AppTheme) -> Task<Message> {
         self.settings.theme = theme;
         self.auto_save()
@@ -40,6 +45,14 @@ impl InventoryApp {
 
     pub fn handle_layout_style_changed(&mut self, style: LayoutStyle) -> Task<Message> {
         self.settings.layout_style = style;
+        self.auto_save()
+    }
+
+    pub fn handle_inventory_view_mode_changed(
+        &mut self,
+        mode: crate::messages::InventoryViewMode,
+    ) -> Task<Message> {
+        self.settings.inventory_view_mode = mode;
         self.auto_save()
     }
 

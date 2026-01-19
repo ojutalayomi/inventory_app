@@ -18,6 +18,8 @@ pub enum Message {
     PriceChanged(String),
     SubmitItem,
     DeleteItem(String), // Changed to use ID
+    ExportInventoryCsv,
+    InventoryViewModeChanged(InventoryViewMode),
 
     // Editor/Notes messages
     CreateNote,
@@ -27,6 +29,7 @@ pub enum Message {
     DeleteNote(String),
     ConfirmDeleteNote,
     CloseDeleteConfirm,
+    ExportNote(NoteExportFormat),
 
     // Calculator messages
     ToggleCalculator,
@@ -89,6 +92,7 @@ pub enum Message {
     ToggleAutoSave,
     AutoSaveIntervalChanged(String),
     DefaultCategoryChanged(String),
+    CurrencyChanged(String),
     ThemeChanged(AppTheme),
     ToggleLoadingScreen,
     LayoutStyleChanged(LayoutStyle),
@@ -128,6 +132,49 @@ pub enum AppTheme {
 pub enum LayoutStyle {
     Header,
     Sidebar,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InventoryViewMode {
+    Cards,
+    Table,
+}
+
+impl Default for InventoryViewMode {
+    fn default() -> Self {
+        InventoryViewMode::Cards
+    }
+}
+
+impl serde::Serialize for InventoryViewMode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(match self {
+            InventoryViewMode::Cards => "cards",
+            InventoryViewMode::Table => "table",
+        })
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for InventoryViewMode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(match s.as_str() {
+            "table" => InventoryViewMode::Table,
+            _ => InventoryViewMode::Cards,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NoteExportFormat {
+    Txt,
+    Markdown,
 }
 
 impl Default for LayoutStyle {
@@ -200,10 +247,14 @@ pub struct AppSettings {
     pub auto_save_enabled: bool,
     pub auto_save_interval: u32, // seconds
     pub default_category: String,
+    #[serde(default)]
+    pub preferred_currency: String,
     pub theme: AppTheme,
     pub show_loading_screen: bool,
     #[serde(default)]
     pub layout_style: LayoutStyle,
+    #[serde(default)]
+    pub inventory_view_mode: InventoryViewMode,
     #[serde(default)]
     pub device_notifications_enabled: bool,
     #[serde(default)]
@@ -218,9 +269,11 @@ impl Default for AppSettings {
             auto_save_enabled: true,
             auto_save_interval: 5,
             default_category: String::from("General"),
+            preferred_currency: String::from("USD"),
             theme: AppTheme::Dark,
             show_loading_screen: true,
             layout_style: LayoutStyle::default(),
+            inventory_view_mode: InventoryViewMode::default(),
             device_notifications_enabled: true,
             update_notifications_enabled: true,
             notification_throttle_seconds: 30,

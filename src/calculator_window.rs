@@ -1,9 +1,10 @@
+use iced::keyboard::{self, Key};
 use iced::window;
-use iced::{Element, Task};
+use iced::{Element, Subscription, Task};
 
 use crate::calculator::Calculator;
 use crate::icon;
-use crate::messages::{AppTheme, LoadError};
+use crate::messages::{AppTheme, CalculatorOp, LoadError};
 use crate::persistence;
 use crate::views;
 use crate::Message;
@@ -62,6 +63,41 @@ impl CalculatorWindow {
             AppTheme::Light => iced::Theme::Light,
         }
     }
+
+    pub fn subscription(&self) -> Subscription<Message> {
+        keyboard::on_key_press(|key, modifiers| {
+            let allow_modifiers = modifiers.is_empty()
+                || modifiers == keyboard::Modifiers::SHIFT;
+
+            if !allow_modifiers {
+                return None;
+            }
+
+            match key.as_ref() {
+                Key::Character(character) => match character.as_ref() {
+                    "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "." => {
+                        Some(Message::CalculatorInput(character.to_string()))
+                    }
+                    "=" if modifiers == keyboard::Modifiers::SHIFT => {
+                        Some(Message::CalculatorOperation(CalculatorOp::Add))
+                    }
+                    "8" if modifiers == keyboard::Modifiers::SHIFT => {
+                        Some(Message::CalculatorOperation(CalculatorOp::Multiply))
+                    }
+                    "+" => Some(Message::CalculatorOperation(CalculatorOp::Add)),
+                    "-" => Some(Message::CalculatorOperation(CalculatorOp::Subtract)),
+                    "*" | "x" | "X" => Some(Message::CalculatorOperation(CalculatorOp::Multiply)),
+                    "/" => Some(Message::CalculatorOperation(CalculatorOp::Divide)),
+                    "=" => Some(Message::CalculatorEquals),
+                    "c" | "C" => Some(Message::CalculatorClear),
+                    _ => None,
+                },
+                Key::Named(keyboard::key::Named::Enter) => Some(Message::CalculatorEquals),
+                Key::Named(keyboard::key::Named::Escape) => Some(Message::CalculatorClear),
+                _ => None,
+            }
+        })
+    }
 }
 
 pub fn run() -> iced::Result {
@@ -71,6 +107,7 @@ pub fn run() -> iced::Result {
         CalculatorWindow::view,
     )
     .theme(CalculatorWindow::theme)
+    .subscription(CalculatorWindow::subscription)
     .window(window::Settings {
         size: iced::Size::new(360.0, 520.0),
         min_size: Some(iced::Size::new(320.0, 480.0)),

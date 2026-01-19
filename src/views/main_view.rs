@@ -638,6 +638,8 @@ impl InventoryApp {
                 &self.items,
                 &self.search_filter,
                 self.show_search_panel,
+                &self.settings.preferred_currency,
+                self.settings.inventory_view_mode,
                 theme,
             ),
             View::Editor => crate::views::editor::view(

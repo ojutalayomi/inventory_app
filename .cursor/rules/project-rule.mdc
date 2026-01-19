@@ -1,0 +1,9 @@
+---
+name: project-rule
+description: This is a new rule
+priority: high
+---
+
+# Overview
+
+When a new feature is added or a bug is fixed, update the CHANGELOG.md file(at the end of the file) to reflect the changes.
